@@ -1,60 +1,47 @@
 local all_recipes = data.raw.recipe
 
 --recipes for which I can find legal crafting
-local recipes = {
-    --logistic
-    ["ee-linked-belt"]={},
-    ["ee-linked-chest"]={},
-    ["ee-super-inserter"]={},
-    ["ee-super-locomotive"]={},
-    ["ee-super-pump"]={},
-
-    --energy
-    ["ee-super-electric-pole"]={},
-    ["ee-super-fuel"]={},
-    ["ee-super-substation"]={},
-
-    --equipment
-    ["ee-infinity-fusion-reactor-equipment"]={},
-    ["ee-super-energy-shield-equipment"]={},
-    ["ee-super-battery-equipment"]={},
-    ["ee-super-exoskeleton-equipment"]={},
-    ["ee-super-night-vision-equipment"]={},
-    ["ee-super-personal-roboport-equipment"]={},
-
-    --robots
-    ["ee-super-construction-robot"]={},
-    ["ee-super-logistic-robot"]={},
-    ["ee-super-roboport"]={},
-
-    --modules/effects
-    ["ee-super-beacon"]={},
-    ["ee-super-speed-module"]={},
-    ["ee-super-effectivity-module"]={},
-    ["ee-super-productivity-module"]={},
-    ["ee-super-clean-module"]={},
-    ["ee-super-slow-module"]={},
-    ["ee-super-ineffectivity-module"]={},
-    ["ee-super-dirty-module"]={},
-
-    --other
-    ["ee-super-lab"]={},
-    ["ee-super-radar"]={},
-}
-for _, value in pairs(recipes) do
-    value["can_make_legaly"] = true
-end
+local defines = require("defines")
+local recipes = defines.recipes
 
 --find all other recepies
-for key, value in pairs(all_recipes) do
-    if value.category == "ee-testing-tool" then
-        if settings.startup["rfEE_allow_all_items"].value or recipes[key] then
-            value.enabled = true
+if settings.startup["rfEE_allow_all_items"].value then
+    for key, value in pairs(all_recipes) do
+        if value.category == "ee-testing-tool" then
+            if not recipes[key] then
+                value.enabled = true    --now I just turn it on, no more actions
+                log('found recipe '..key..' that was not found in definitions')
+            end
         end
-        if not recipes[key] then
-            --value["can_make_legaly"] = false
-            recipes[key] = {["can_make_legaly"] = false}
-        end
+    end
+end
 
+--functions for generating recepies
+function module_processing(data)
+    data.recipe_object.ingredients = {}
+end
+
+function defined_stuff(data)
+    if data.define_recipe_table.type == "defined" then
+        data.recipe_object.ingredients = data.define_recipe_table.recipe
+    else
+        log('recepie category mark as defined but recepy is not! '..data.recipe_object.name)
+    end
+end
+defines.set_function_by_keyword('defined', defined_stuff)
+
+for raw_type, types_table in pairs(defines.types) do
+    func_apply_recipe = types_table.func
+    for recipe, table in pairs(recipes) do
+        if data.raw[raw_type][recipe] then
+            func_apply_recipe(
+                {
+                    ["data_raw_category"] = data.raw[raw_type],
+                    ["recipe_object"] = all_recipes[recipe],
+                    ["define_recipe_table"] = table,
+                    ["types_table"] = types_table,
+                })
+            all_recipes[recipe].enabled = true
+        end
     end
 end
