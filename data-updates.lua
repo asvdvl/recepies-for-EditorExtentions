@@ -77,7 +77,9 @@ for raw_type, types_table in pairs(defines.types) do
                     ["define_recipe_table"] = table,
                     ["types_table"] = types_table,
                 })
-            all_recipes[recipe].enabled = true
+            if #all_recipes[recipe].ingredients > 0 then
+                all_recipes[recipe].enabled = true
+            end
         end
     end
 end

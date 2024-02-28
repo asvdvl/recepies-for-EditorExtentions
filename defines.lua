@@ -5,11 +5,19 @@ defines.recipes = {
     ["ee-linked-belt"]={
         ["type"]="defined",
         ["recipe"]={
-            {type="item", name="logistic-chest-passive-provider", amount=1},
-            {type="item", name="logistic-chest-requester", amount=1},
-            {type="item", name="ee-super-logistic-robot", amount=1},
-            {type="item", name="express-underground-belt", amount=1},
+            {type="item", name="cargo-wagon", amount=1},
+            --[[
+                Let's imagine that the electric motor has a power of 5 kW
+                (based on a 200 kW exoskeleton with 30 motors in the recipe)
+                and this means that we need 1 thousand to achieve the 5 MW figure.
 
+                I actually pulled these numbers out of thin air), but if you believe the knowledge of my friends who are fond of the metro,
+                the metro car uses 300 kW for acceleration,
+                so we will assume that we will take it with a reserve for cargo.
+            ]]
+            {type="item", name="electric-engine-unit", amount=1024},
+            {type="item", name="processing-unit", amount=512},
+            {type="item", name="express-underground-belt", amount=1},
         }},
     ["ee-linked-chest"]={
         ["type"]="defined",
