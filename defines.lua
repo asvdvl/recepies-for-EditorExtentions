@@ -8,7 +8,7 @@ defines.recipes = {
             {type="item", name="logistic-chest-passive-provider", amount=1},
             {type="item", name="logistic-chest-requester", amount=1},
             {type="item", name="ee-super-logistic-robot", amount=1},
-            {type="item", name="express-transport-belt", amount=2},
+            {type="item", name="express-underground-belt", amount=1},
 
         }},
     ["ee-linked-chest"]={
@@ -16,7 +16,7 @@ defines.recipes = {
         --According to my calculations, using 1 super inserters you can achieve a speed of 360 items per second using these chests! therefore, 360/45 = 8, also multiply by 4 sides and get 32 conveyors!
         ["recipe"]={
             {type="item", name="ee-linked-belt", amount=32},
-            {type="item", name="steel-chest", amount=2},
+            {type="item", name="steel-chest", amount=1},
         }},
     ["ee-super-inserter"]={},
     ["ee-super-locomotive"]={},
@@ -65,67 +65,92 @@ end
 local function empty_function(...) log('empty_function call detected! this shouldnt have happened! params: '..serpent.block({...})) end
 
 defines.types = {
-    ["linked-belt"] =
-        {['keyword'] = "defined"},
+    --defined
+    ["linked-belt"] = {
+        ['keyword'] = "defined"
+    },
 
-    ["linked-container"] =
-        {['keyword'] = "defined"},
+    ["linked-container"] = {
+        ['keyword'] = "defined"
+    },
 
-    ["module"] =
-        {['search_rows'] = {'effect'}},
+    --simply_property
+    ["construction-robot"] = {
+        ['keyword'] = "simply_property",
+        ['search_rows'] = {"max_payload_size", "speed"}
+    },
 
-    ["electric-pole"] =
-        {['search_rows'] = {"maximum_wire_distance", "supply_area_distance"}},
+    ["logistic-robot"] = {
+        ['keyword'] = "simply_property",
+        ['search_rows'] = {"max_payload_size", "speed"}
+    },
 
-    ["inserter"] =
-        {['search_rows'] = {"extension_speed", "rotation_speed"}},
+    --other
+    ["module"] = {
+        ['search_rows'] = {'effect'}
+    },
 
-    ["radar"] =
-        {['search_rows'] = {"max_distance_of_sector_revealed", "max_distance_of_nearby_sector_revealed"}},
+    ["electric-pole"] = {
+        ['search_rows'] = {"maximum_wire_distance", "supply_area_distance"}
+    },
 
-    ["lab"] =
-        {['search_rows']={"researching_speed"}},
+    ["inserter"] = {
+        ['search_rows'] = {"extension_speed", "rotation_speed"}
+    },
 
-    ["roboport"] =
-        {['search_rows'] = {"logistics_radius", "construction_radius"}},
+    ["radar"] = {
+        ['search_rows'] = {"max_distance_of_sector_revealed", "max_distance_of_nearby_sector_revealed"}
+    },
 
-    ["pump"] =
-        {['search_rows'] = {"pumping_speed"}},
+    ["lab"] = {
+        ['search_rows']={"researching_speed"}
+    },
 
-    ["beacon"] =
-        {['search_rows'] = {"supply_area_distance"}},
+    ["roboport"] = {
+        ['search_rows'] = {"logistics_radius", "construction_radius"}
+    },
 
-    ["locomotive"] =
-        {['search_rows'] = {"max_speed", "max_power"}},
+    ["pump"] = {
+        ['search_rows'] = {"pumping_speed"}
+    },
 
-    ["construction-robot"] =
-        {['search_rows'] = {"max_payload_size", "speed"}},
+    ["beacon"] = {
+        ['search_rows'] = {"supply_area_distance"}
+    },
 
-    ["logistic-robot"] =
-        {['search_rows'] = {"max_payload_size", "speed"}},
+    ["locomotive"] = {
+        ['search_rows'] = {"max_speed", "max_power"}
+    },
 
-    ["night-vision-equipment"] =
-        {},
+    ["night-vision-equipment"] = {},
 
-    ["energy-shield-equipment"] =
-        {['search_rows'] = {"max_shield_value"}},
+    ["energy-shield-equipment"] = {
+        ['search_rows'] = {"max_shield_value"}
+    },
 
-    ["battery-equipment"] =
-        {['search_rows'] = {"energy_source", "buffer_capacity"}},
+    ["battery-equipment"] = {
+        ['search_rows'] = {"energy_source", "buffer_capacity"}
+    },
 
-    ["generator-equipment"] =
-        {['search_rows'] = {"power"}},
+    ["generator-equipment"] = {
+        ['search_rows'] = {"power"}
+    },
 
-    ["roboport-equipment"] =
-        {['search_rows'] = {"construction_radius"}},
+    ["roboport-equipment"] = {
+        ['search_rows'] = {"construction_radius"}
+    },
 
-    ["movement-bonus-equipment"] =
-        {['search_rows'] = {"movement_bonus"}},
+    ["movement-bonus-equipment"] = {
+        ['search_rows'] = {"movement_bonus"}
+    },
 }
 
 for _, value in pairs(defines.types) do
-    value["func"] = empty_function
-    value["top_items"] = {}
+    value.func = empty_function
+    value.top_items = {}
+    value.top_items.init = false
+    value.top_items.data = {}
+
     if not value['search_rows'] then
         value['search_rows'] = {}
     end

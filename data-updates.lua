@@ -21,6 +21,42 @@ function module_processing(data)
     data.recipe_object.ingredients = {}
 end
 
+function base_simply_property_stuff(data)
+    --should be rewriten for dynamic properties support
+    local function find_diff_value(search_rows, item)
+        if #search_rows == 1 then
+            pairValue = item[search_rows[1]]
+        else
+            pairValue = item[search_rows[1]] + item[search_rows[2]]
+        end
+        return pairValue
+    end
+    local max_value_for_target_item = 0
+    if not data.types_table.top_items.init then
+        local maxValue = 0
+        for _, item in pairs(data.data_raw_category) do
+            local pairValue = math.abs(find_diff_value(data.types_table.search_rows, item))
+            if item.name == data.recipe_object.name then
+                max_value_for_target_item = pairValue
+            elseif pairValue > maxValue then
+                maxValue = pairValue
+                data.types_table.top_items.data = {item, pairValue}
+            end
+        end
+    end
+    local amount = math.ceil(max_value_for_target_item/data.types_table.top_items.data[2])
+    if amount > 65535 then
+        amount = 65535
+    end
+    --data.types_table.top_items.data
+    data.recipe_object.ingredients = {
+        {type="item",
+        name=data.types_table.top_items.data[1].name,
+        amount=amount}
+    }
+end
+defines.set_function_by_keyword('simply_property', base_simply_property_stuff)
+
 function defined_stuff(data)
     if data.define_recipe_table.type == "defined" then
         data.recipe_object.ingredients = data.define_recipe_table.recipe
