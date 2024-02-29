@@ -16,21 +16,28 @@ if settings.startup["rfEE_allow_all_items"].value then
     end
 end
 
+local function find_diff_value(search_rows, item)
+    local totalSum = 0
+    for _, row_name in pairs(search_rows) do
+        if item[row_name] then
+            if type(item[row_name]) ~= "boolean" then
+                totalSum = totalSum + item[row_name]
+            else
+                totalSum = totalSum + 0.01
+            end
+        else
+            log('property '..row_name..'is '..tostring(item[row_name])..'(nil). prototype '..item.name)
+        end
+    end
+    return totalSum
+end
+
 --functions for generating recepies
 function module_processing(data)
     data.recipe_object.ingredients = {}
 end
 
 function base_simply_property_stuff(data)
-    --should be rewriten for dynamic properties support
-    local function find_diff_value(search_rows, item)
-        if #search_rows == 1 then
-            pairValue = item[search_rows[1]]
-        else
-            pairValue = item[search_rows[1]] + item[search_rows[2]]
-        end
-        return pairValue
-    end
     local max_value_for_target_item = 0
     if not data.types_table.top_items.init then
         local maxValue = 0
@@ -61,7 +68,9 @@ function defined_stuff(data)
     if data.define_recipe_table.type == "defined" then
         data.recipe_object.ingredients = data.define_recipe_table.recipe
     else
-        log('recepie category mark as defined but recepy is not! '..data.recipe_object.name)
+        log('-----------------------------------------------------------')
+        log('recipe category mark as defined but recipe mark as '..data.define_recipe_table.type..'! '..data.recipe_object.name)
+        log('-----------------------------------------------------------')
     end
 end
 defines.set_function_by_keyword('defined', defined_stuff)
@@ -81,5 +90,12 @@ for raw_type, types_table in pairs(defines.types) do
                 all_recipes[recipe].enabled = true
             end
         end
+    end
+end
+
+for _, prototype in pairs(data.raw["assembling-machine"]) do
+    local _, _, proto_name = string.find(prototype.name, "(.+)-%d+$")
+    if proto_name == "assembling-machine" then
+        table.insert(prototype.crafting_categories, "ee-testing-tool")
     end
 end
