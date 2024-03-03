@@ -96,7 +96,7 @@ defines.types = {
 
     ["inserter"] = {
         ['keyword'] = "simply_property",
-        ['search_rows'] = {"rotation_speed", "stack"}
+        ['search_rows'] = {["rotation_speed"] = 21600, "stack"}
     },
 
     ["lab"] = {
@@ -118,9 +118,23 @@ defines.types = {
         ['keyword'] = "simply_property",
         ['search_rows'] = {"movement_bonus"}
     },
+
+    --energy related stuff but compatible with simply_property
+    ["locomotive"] = {
+        ['keyword'] = "simply_property",
+        ['search_rows'] = {"max_speed", "max_power"}
+    },
+
+    ["generator-equipment"] = {
+        ['keyword'] = "simply_property",
+        ['search_rows'] = {"power"}
+    },
+
     --other
     ['item'] = {
-
+        ['keyword'] = "items",
+        --this is a large class of things that includes all the entities listed here, so a whitelist(regex rule) is needed
+        ['whitelist'] = {"*fuel"},
     },
 
     ["module"] = {
@@ -131,55 +145,53 @@ defines.types = {
         ['search_rows'] = {"maximum_wire_distance", "supply_area_distance"}
     },
 
-
     ["radar"] = {
         ['search_rows'] = {"max_distance_of_sector_revealed", "max_distance_of_nearby_sector_revealed"}
     },
-
 
     ["roboport"] = {
         ['search_rows'] = {"logistics_radius", "construction_radius"}
     },
 
-
     ["beacon"] = {
         ['search_rows'] = {"supply_area_distance"}
     },
 
-    ["locomotive"] = {
-        ['search_rows'] = {"max_speed", "max_power"}
-    },
-
-    ["night-vision-equipment"] = {},
 
 
     ["battery-equipment"] = {
-        ['search_rows'] = {"energy_source", "buffer_capacity"}
-    },
-
-    ["generator-equipment"] = {
-        ['search_rows'] = {"power"}
+        ['search_rows'] = {"energy_source/buffer_capacity"}
     },
 
     ["roboport-equipment"] = {
         ['search_rows'] = {"construction_radius"}
     },
 
-
 }
 
-for _, value in pairs(defines.types) do
-    value.func = empty_function
-    value.top_items = {}
-    value.top_items.init = false
-    value.top_items.data = {}
+--filling in all missing fields by default
+for _, type in pairs(defines.types) do
+    type.func = empty_function
+    type.top_items = {}
+    type.top_items.init = false
+    type.top_items.data = {}
 
-    if not value['search_rows'] then
-        value['search_rows'] = {}
+    if not type['search_rows'] then
+        type['search_rows'] = {}
     end
 
-    if not value['keyword'] then
-        value['keyword'] = ""
+    if not type['keyword'] then
+        type['keyword'] = ""
+    end
+end
+
+--convert subtables in search_rows like {"power"} to {["power"]=1}
+for _, type in pairs(defines.types) do
+    for row_name, row in pairs(type.search_rows) do
+        if tonumber(row_name) then
+            type.search_rows[row] = 1
+            type.search_rows[row_name] = nil
+        end
     end
 end
 

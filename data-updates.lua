@@ -1,5 +1,5 @@
 local all_recipes = data.raw.recipe
-
+local get_energy_value = require("__flib__/data-util").get_energy_value
 --recipes for which I can find legal crafting
 local defines = require("defines")
 local recipes = defines.recipes
@@ -18,15 +18,20 @@ end
 
 local function find_diff_value(search_rows, item)
     local totalSum = 0
-    for _, row_name in pairs(search_rows) do
+    local value = 0
+    for row_name, multiplier in pairs(search_rows) do
         if item[row_name] then
-            if type(item[row_name]) ~= "boolean" then
-                totalSum = totalSum + item[row_name]
-            else
-                totalSum = totalSum + 0.01
+            value = 0
+            if type(item[row_name]) == "number" then
+                value = item[row_name]
+            elseif type(item[row_name]) == "string" then
+                value = get_energy_value(item[row_name])
+            elseif type(item[row_name]) == "boolean" then
+                value = 1
             end
+            totalSum = totalSum + (value * multiplier)
         else
-            log('property '..row_name..'is '..tostring(item[row_name])..'(nil). prototype '..item.name)
+            log('property '..row_name..' is '..tostring(item[row_name])..'(nil). prototype '..item.name)
         end
     end
     return totalSum
