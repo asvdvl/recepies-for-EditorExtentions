@@ -4,16 +4,22 @@ local get_energy_value = require("__flib__/data-util").get_energy_value
 local defines = require("defines")
 local recipes = defines.recipes
 
---find all other recepies
-if settings.startup["rfEE_allow_all_items"].value then
-    for key, value in pairs(all_recipes) do
-        if value.category == "ee-testing-tool" then
-            if not recipes[key] then
-                value.enabled = true    --now I just turn it on, no more actions
-                log('found recipe '..key..' that was not found in definitions')
-            end
+--allows to specify some "code" in a string that is executed here. for example (25, '^2') -> 625
+local function perfom_math_from_string(x, multiplier)
+    local func, errorMsg = load("return "..x..multiplier)
+    if func then
+        local status, result = pcall(func)
+        if status then
+            return result
+        else
+            error('error when executing expression ('..x..', '..multiplier..') by reason '..result)
+            return x
         end
+    else
+        error('error when executing expression ('..x..', '..multiplier..') by reason '..errorMsg)
+        return x
     end
+    return x
 end
 
 local function find_diff_value(search_rows, item)
@@ -29,7 +35,11 @@ local function find_diff_value(search_rows, item)
             elseif type(item[row_name]) == "boolean" then
                 value = 1
             end
-            totalSum = totalSum + (value * multiplier)
+            if type(multiplier) == "number" then
+                totalSum = totalSum + (value * multiplier)
+            elseif type(multiplier) == "string" then
+                totalSum = totalSum + perfom_math_from_string(value, multiplier)
+            end
         else
             log('property '..row_name..' is '..tostring(item[row_name])..'(nil). prototype '..item.name)
         end
@@ -38,11 +48,11 @@ local function find_diff_value(search_rows, item)
 end
 
 --functions for generating recepies
-function module_processing(data)
+local function module_processing(data)
     data.recipe_object.ingredients = {}
 end
 
-function base_simply_property_stuff(data)
+local function base_property_stuff(data)
     local max_value_for_target_item = 0
     if not data.types_table.top_items.init then
         local maxValue = 0
@@ -55,6 +65,7 @@ function base_simply_property_stuff(data)
                 data.types_table.top_items.data = {item, pairValue}
             end
         end
+        data.types_table.top_items.init = true
     end
     local amount = math.ceil(max_value_for_target_item/data.types_table.top_items.data[2])
     if amount > 65535 then
@@ -67,19 +78,28 @@ function base_simply_property_stuff(data)
         amount=amount}
     }
 end
-defines.set_function_by_keyword('simply_property', base_simply_property_stuff)
+defines.set_function_by_keyword('base_property', base_property_stuff)
 
-function defined_stuff(data)
-    if data.define_recipe_table.type == "defined" then
-        data.recipe_object.ingredients = data.define_recipe_table.recipe
+--this function falls out of the principle of "code universality" that I adhere to, but I’m tired of putting all these filters in defined.lua
+local function item_processing(data)
+    if string.find(data.recipes_table.type, "item") then
+        
+    end
+end
+defines.set_function_by_keyword('items', item_processing)
+
+local function defined_stuff(data)
+    if data.recipes_table.type == "defined" then
+        data.recipe_object.ingredients = data.recipes_table.recipe
     else
         log('-----------------------------------------------------------')
-        log('recipe category mark as defined but recipe mark as '..data.define_recipe_table.type..'! '..data.recipe_object.name)
+        log('recipe category mark as defined but recipe mark as '..data.recipes_table.type..'! '..data.recipe_object.name)
         log('-----------------------------------------------------------')
     end
 end
 defines.set_function_by_keyword('defined', defined_stuff)
 
+--main cycle for apply/calc all recepies
 for raw_type, types_table in pairs(defines.types) do
     func_apply_recipe = types_table.func
     for recipe, table in pairs(recipes) do
@@ -88,16 +108,17 @@ for raw_type, types_table in pairs(defines.types) do
                 {
                     ["data_raw_category"] = data.raw[raw_type],
                     ["recipe_object"] = all_recipes[recipe],
-                    ["define_recipe_table"] = table,
+                    ["recipes_table"] = table,
                     ["types_table"] = types_table,
                 })
-            if #all_recipes[recipe].ingredients > 0 then
+            if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
                 all_recipes[recipe].enabled = true
             end
         end
     end
 end
 
+--allow assemblers to make new recepies
 for _, prototype in pairs(data.raw["assembling-machine"]) do
     local _, _, proto_name = string.find(prototype.name, "(.+)-%d+$")
     if proto_name == "assembling-machine" then

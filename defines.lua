@@ -32,8 +32,12 @@ defines.recipes = {
     ["ee-super-pump"]={},
 
     --energy
-    ["ee-super-electric-pole"]={},
-    ["ee-super-fuel"]={},
+    --["ee-super-electric-pole"]={}, --this item is disabled due to its uselessness and the complexity of 2 different processings for 1 class
+    ["ee-super-fuel"]={
+        ["type"]="item_generated",
+        ["name_filter"] = "fuel",
+        ['search_rows'] = {"fuel_value", "fuel_acceleration_multiplier", "fuel_top_speed_multiplier"},
+    },
     ["ee-super-substation"]={},
 
     --equipment
@@ -65,13 +69,20 @@ defines.recipes = {
 }
 
 for _, value in pairs(defines.recipes) do
-    if value.type ~= "defined" then
+    if not value.type then
         value.type = "generated"
         value.recipe = {}
     end
 end
 
-local function empty_function(...) log('empty_function call detected! this shouldnt have happened! params: '..serpent.block({...})) end
+local function empty_function(...)
+    local table = {...}
+    if table[1] and table[1]["recipe_object"] then
+        log('empty_function call detected! this shouldnt have happened! prototype: '..table[1].recipe_object.name)
+    else
+        log('empty_function call detected! this shouldnt have happened! params: '..serpent.block(table))
+    end
+end
 
 defines.types = {
     --defined
@@ -83,88 +94,91 @@ defines.types = {
         ['keyword'] = "defined"
     },
 
-    --simply_property
+    --base_property
     ["construction-robot"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"max_payload_size", "speed"}
     },
 
     ["logistic-robot"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"max_payload_size", "speed"}
     },
 
     ["inserter"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {["rotation_speed"] = 21600, "stack"}
     },
 
     ["lab"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows']={"researching_speed"}
     },
 
     ["pump"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"pumping_speed"}
     },
 
     ["energy-shield-equipment"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"max_shield_value"}
     },
 
     ["movement-bonus-equipment"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"movement_bonus"}
     },
 
-    --energy related stuff but compatible with simply_property
+    --energy related stuff but compatible with base_property
     ["locomotive"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"max_speed", "max_power"}
     },
 
     ["generator-equipment"] = {
-        ['keyword'] = "simply_property",
+        ['keyword'] = "base_property",
         ['search_rows'] = {"power"}
     },
 
-    --other
-    ['item'] = {
-        ['keyword'] = "items",
-        --this is a large class of things that includes all the entities listed here, so a whitelist(regex rule) is needed
-        ['whitelist'] = {"*fuel"},
+    --with area
+    ["radar"] = {
+        ['keyword'] = "base_property",
+        ['search_rows'] = {["max_distance_of_sector_revealed"] = "^2", ["max_distance_of_nearby_sector_revealed"] = "^2"}
     },
 
+    ["roboport"] = {
+        ['keyword'] = "base_property",
+        ['search_rows'] = {["logistics_radius"] = "^2", ["construction_radius"] = "^2"}
+    },
+
+    ["roboport-equipment"] = {
+        ['keyword'] = "base_property",
+        ['search_rows'] = {["construction_radius"] = "^2"}
+    },
+
+    ["beacon"] = {
+        ['keyword'] = "base_property",
+        ['search_rows'] = {["supply_area_distance"] = "^2"}
+    },
+
+    ["electric-pole"] = {
+        ['keyword'] = "base_property",
+        ['search_rows'] = {"maximum_wire_distance", ["supply_area_distance"] = "^2"}
+    },
+
+    --items are too complex for processing, i just moved search_rows to 
+    ['item'] = {
+        ['keyword'] = "items",
+    },
+
+    --other
     ["module"] = {
         ['search_rows'] = {'effect'}
     },
 
-    ["electric-pole"] = {
-        ['search_rows'] = {"maximum_wire_distance", "supply_area_distance"}
-    },
-
-    ["radar"] = {
-        ['search_rows'] = {"max_distance_of_sector_revealed", "max_distance_of_nearby_sector_revealed"}
-    },
-
-    ["roboport"] = {
-        ['search_rows'] = {"logistics_radius", "construction_radius"}
-    },
-
-    ["beacon"] = {
-        ['search_rows'] = {"supply_area_distance"}
-    },
-
-
-
     ["battery-equipment"] = {
         ['search_rows'] = {"energy_source/buffer_capacity"}
-    },
-
-    ["roboport-equipment"] = {
-        ['search_rows'] = {"construction_radius"}
     },
 
 }
