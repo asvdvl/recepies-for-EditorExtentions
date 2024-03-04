@@ -22,6 +22,10 @@ local function perfom_math_from_string(x, multiplier)
     return x
 end
 
+--[[
+    a function that returns the "sum" of properties for a specified entity,
+    to determine how the entity's properties differ from the properties of another entity
+]]
 local function find_diff_value(search_rows, item)
     local totalSum = 0
     local value = 0
@@ -54,27 +58,26 @@ end
 
 local function base_property_stuff(data)
     local max_value_for_target_item = 0
-    if not data.types_table.top_items.init then
-        local maxValue = 0
-        for _, item in pairs(data.data_raw_category) do
-            local pairValue = math.abs(find_diff_value(data.types_table.search_rows, item))
-            if item.name == data.recipe_object.name then
-                max_value_for_target_item = pairValue
-            elseif pairValue > maxValue then
-                maxValue = pairValue
-                data.types_table.top_items.data = {item, pairValue}
-            end
+    local maxValue = 0
+
+    for _, item in pairs(data.data_raw_category) do
+        local pairValue = math.abs(find_diff_value(data.types_table.search_rows, item))
+        if item.name == data.recipe_object.name then
+            max_value_for_target_item = pairValue
+        elseif pairValue > maxValue then
+            maxValue = pairValue
+            data.types_table.top_items = {item, pairValue}
         end
-        data.types_table.top_items.init = true
     end
-    local amount = math.ceil(max_value_for_target_item/data.types_table.top_items.data[2])
+
+    local amount = math.ceil(max_value_for_target_item/data.types_table.top_items[2])
     if amount > 65535 then
         amount = 65535
     end
-    --data.types_table.top_items.data
+    --data.types_table.top_items
     data.recipe_object.ingredients = {
         {type="item",
-        name=data.types_table.top_items.data[1].name,
+        name=data.types_table.top_items[1].name,
         amount=amount}
     }
 end
@@ -82,8 +85,20 @@ defines.set_function_by_keyword('base_property', base_property_stuff)
 
 --this function falls out of the principle of "code universality" that I adhere to, but I’m tired of putting all these filters in defined.lua
 local function item_processing(data)
-    if string.find(data.recipes_table.type, "item") then
-        
+    if string.find(data.recipes_table.type, defines.item_processing_prefix) then
+        local fake_data_raw_category = {}
+        for item_name, item_table in pairs(data.data_raw_category) do
+            if string.find(item_name, data.recipes_table.name_filter) then
+                fake_data_raw_category[item_name] = item_table
+            end
+        end
+
+        base_property_stuff({
+            ["data_raw_category"] = fake_data_raw_category,
+            ["recipe_object"] = data.recipe_object,
+            --["recipes_table"] = data.recipes_table,    --not needed
+            ["types_table"] = data.recipes_table,
+        })
     end
 end
 defines.set_function_by_keyword('items', item_processing)

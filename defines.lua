@@ -1,5 +1,6 @@
 local defines = {}
 
+defines.item_processing_prefix = "item"
 defines.recipes = {
     --logistic
     ["ee-linked-belt"]={
@@ -34,9 +35,9 @@ defines.recipes = {
     --energy
     --["ee-super-electric-pole"]={}, --this item is disabled due to its uselessness and the complexity of 2 different processings for 1 class
     ["ee-super-fuel"]={
-        ["type"]="item_generated",
+        ["type"] = defines.item_processing_prefix.."_generated",
         ["name_filter"] = "fuel",
-        ['search_rows'] = {"fuel_value", "fuel_acceleration_multiplier", "fuel_top_speed_multiplier"},
+        ['search_rows'] = {["fuel_value"]=1, ["fuel_acceleration_multiplier"]=1, ["fuel_top_speed_multiplier"]=1},
     },
     ["ee-super-substation"]={},
 
@@ -45,7 +46,14 @@ defines.recipes = {
     ["ee-super-energy-shield-equipment"]={},
     ["ee-super-battery-equipment"]={},
     ["ee-super-exoskeleton-equipment"]={},
-    ["ee-super-night-vision-equipment"]={},
+    ["ee-super-night-vision-equipment"]={
+        ["type"]="defined",
+        ["recipe"]={
+            {type="item", name="night-vision-equipment", amount=1},
+            {type="item", name="processing-unit", amount=50},
+            {type="item", name="effectivity-module", amount=1},
+        }
+    },
     ["ee-super-personal-roboport-equipment"]={},
 
     --robots
@@ -91,6 +99,10 @@ defines.types = {
     },
 
     ["linked-container"] = {
+        ['keyword'] = "defined"
+    },
+
+    ["night-vision-equipment"] = {
         ['keyword'] = "defined"
     },
 
@@ -187,8 +199,6 @@ defines.types = {
 for _, type in pairs(defines.types) do
     type.func = empty_function
     type.top_items = {}
-    type.top_items.init = false
-    type.top_items.data = {}
 
     if not type['search_rows'] then
         type['search_rows'] = {}
