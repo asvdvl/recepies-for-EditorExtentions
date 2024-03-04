@@ -50,14 +50,52 @@ local function find_diff_value(search_rows, item)
     return totalSum
 end
 
+local function is_item_has_craft(item_name)
+    --by some reason, here all_recipes is nil, and idk why
+    all_recipes = data.raw.recipe
+    if all_recipes[item_name] and #all_recipes[item_name].ingredients > 0 then
+        return true
+    else
+        --hello wube, i love you...
+        for _, recipe in pairs(all_recipes) do
+            if recipe.result == item_name then
+                return true
+            elseif recipe.results then
+                for _, results in pairs(recipe.results) do
+                    if results.name == item_name then
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    return false
+end
+
+
 --functions for generating recepies
 local function module_processing(data)
     if not data.types_table.top_items.init then
         data.types_table.top_items.init = true
         data.types_table.top_items.data = {positie = {}, negative = {}}
+        local pos_data = data.types_table.top_items.data.positie
+        local neg_data = data.types_table.top_items.data.negative
+        local current_data
         for module, module_props in pairs(data.data_raw_category) do
             if not defines.recipes[module] then
-                
+                for effect_name, effect_table in pairs(module_props.effect) do
+                    if effect_table.bonus > 0 then
+                        current_data = pos_data
+                    elseif effect_table.bonus < 0 then
+                        current_data = neg_data
+                    else
+                        break   --to be shure
+                    end
+
+                    if not current_data[effect_name] or (math.abs(effect_table.bonus) > math.abs(current_data[effect_name][2])) then
+                        current_data[effect_name] = {module, effect_table.bonus}
+                    end
+                end
             end
         end
     end
@@ -74,7 +112,7 @@ local function base_property_stuff(up_data)
         local pairValue = math.abs(find_diff_value(up_data.types_table.search_rows, item))
         if item.name == up_data.recipe_object.name then
             max_value_for_target_item = pairValue
-        elseif pairValue > maxValue and (data.raw.recipe[item.name] and #data.raw.recipe[item.name].ingredients > 0) then    --by some reason, here all_recipes is nil, and idk why
+        elseif pairValue > maxValue and is_item_has_craft(item.name) then
             maxValue = pairValue
             up_data.types_table.top_items = {item, pairValue}
         end
