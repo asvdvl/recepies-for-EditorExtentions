@@ -4,8 +4,8 @@ defines.item_processing_prefix = "item"
 defines.recipes = {
     --logistic
     ["ee-linked-belt"]={
-        ["type"]="defined",
-        ["recipe"]={
+        type = "defined",
+        recipe = {
             {type="item", name="cargo-wagon", amount=1},
             --[[
                 Let's imagine that the electric motor has a power of 5 kW
@@ -18,13 +18,13 @@ defines.recipes = {
             {type="item", name="fusion-reactor-equipment", amount=1},
         }},
     ["ee-linked-chest"]={
-        ["type"]="defined",
+        type = "defined",
         --[[
             According to my calculations, using 1 super inserters you can achieve a speed of 360 items per second using these chests!
             therefore, 360/45 = 8, also multiply by 4 sides and get 32 conveyors!
             But i give off 75% price for motivating build that massive unloaders!
         ]]
-        ["recipe"]={
+        recipe = {
             {type="item", name="ee-linked-belt", amount=8},
             {type="item", name="steel-chest", amount=1},
         }},
@@ -35,9 +35,9 @@ defines.recipes = {
     --energy
     --["ee-super-electric-pole"]={}, --this item is disabled due to its uselessness and the complexity of 2 different processings for 1 class
     ["ee-super-fuel"]={
-        ["type"] = defines.item_processing_prefix.."_generated",
-        ["name_filter"] = "fuel",
-        ['search_rows'] = {["fuel_value"]=1, ["fuel_acceleration_multiplier"]=1, ["fuel_top_speed_multiplier"]=1},
+        type = defines.item_processing_prefix.."_generated",
+        name_filter = "fuel",
+        search_rows = {fuel_value = 1, fuel_acceleration_multiplier = 1, fuel_top_speed_multiplier = 1},
     },
     ["ee-super-substation"]={},
 
@@ -47,8 +47,8 @@ defines.recipes = {
     ["ee-super-battery-equipment"]={},
     ["ee-super-exoskeleton-equipment"]={},
     ["ee-super-night-vision-equipment"]={
-        ["type"]="defined",
-        ["recipe"]={
+        type = "defined",
+        recipe = {
             {type="item", name="night-vision-equipment", amount=1},
             {type="item", name="processing-unit", amount=50},
             {type="item", name="effectivity-module", amount=1},
@@ -95,102 +95,103 @@ end
 defines.types = {
     --defined
     ["linked-belt"] = {
-        ['keyword'] = "defined"
+        keyword = "defined"
     },
 
     ["linked-container"] = {
-        ['keyword'] = "defined"
+        keyword = "defined"
     },
 
     ["night-vision-equipment"] = {
-        ['keyword'] = "defined"
+        keyword = "defined"
     },
 
     --base_property
     ["construction-robot"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"max_payload_size", "speed"}
+        keyword = "base_property",
+        search_rows = {"max_payload_size", "speed"}
     },
 
     ["logistic-robot"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"max_payload_size", "speed"}
+        keyword = "base_property",
+        search_rows = {"max_payload_size", "speed"}
     },
 
     ["inserter"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {["rotation_speed"] = 21600, "stack"}
+        keyword = "base_property",
+        search_rows = {["rotation_speed"] = 21600, "stack"}
     },
 
     ["lab"] = {
-        ['keyword'] = "base_property",
-        ['search_rows']={"researching_speed"}
+        keyword = "base_property",
+        search_rows = {"researching_speed"}
     },
 
     ["pump"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"pumping_speed"}
+        keyword = "base_property",
+        search_rows = {"pumping_speed"}
     },
 
     ["energy-shield-equipment"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"max_shield_value"}
+        keyword = "base_property",
+        search_rows = {"max_shield_value"}
     },
 
     ["movement-bonus-equipment"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"movement_bonus"}
+        keyword = "base_property",
+        search_rows = {"movement_bonus"}
     },
 
     --energy related stuff but compatible with base_property
     ["locomotive"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"max_speed", "max_power"}
+        keyword = "base_property",
+        search_rows = {"max_speed", "max_power"}
     },
 
     ["generator-equipment"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"power"}
+        keyword = "base_property",
+        search_rows = {"power"}
     },
 
     --with area
     ["radar"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {["max_distance_of_sector_revealed"] = "^2", ["max_distance_of_nearby_sector_revealed"] = "^2"}
+        keyword = "base_property",
+        search_rows = {["max_distance_of_sector_revealed"] = "^2", ["max_distance_of_nearby_sector_revealed"] = "^2"}
     },
 
     ["roboport"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {["logistics_radius"] = "^2", ["construction_radius"] = "^2"}
+        keyword = "base_property",
+        search_rows = {["logistics_radius"] = "^2", ["construction_radius"] = "^2"}
     },
 
     ["roboport-equipment"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {["construction_radius"] = "^2"}
+        keyword = "base_property",
+        search_rows = {["construction_radius"] = "^2"}
     },
 
     ["beacon"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {["supply_area_distance"] = "^2"}
+        keyword = "base_property",
+        search_rows = {["supply_area_distance"] = "^2"}
     },
 
     ["electric-pole"] = {
-        ['keyword'] = "base_property",
-        ['search_rows'] = {"maximum_wire_distance", ["supply_area_distance"] = "^2"}
+        keyword = "base_property",
+        search_rows = {"maximum_wire_distance", ["supply_area_distance"] = "^2"}
     },
 
     --items are too complex for processing, i just moved search_rows to 
     ['item'] = {
-        ['keyword'] = "items",
+        keyword = "items",
     },
 
     --other
     ["module"] = {
-        ['search_rows'] = {'effect'}
+        keyword = "modules",
+        search_rows = {'effect'}
     },
 
     ["battery-equipment"] = {
-        ['search_rows'] = {"energy_source/buffer_capacity"}
+        search_rows = {"energy_source/buffer_capacity"}
     },
 
 }
@@ -201,20 +202,20 @@ for _, type in pairs(defines.types) do
     type.top_items = {}
 
     if not type['search_rows'] then
-        type['search_rows'] = {}
+        type.search_rows = {}
     end
 
     if not type['keyword'] then
-        type['keyword'] = ""
+        type.keyword = ""
     end
 end
 
 --convert subtables in search_rows like {"power"} to {["power"]=1}
-for _, type in pairs(defines.types) do
-    for row_name, row in pairs(type.search_rows) do
-        if tonumber(row_name) then
-            type.search_rows[row] = 1
-            type.search_rows[row_name] = nil
+for _, types in pairs(defines.types) do
+    for row_name, row in pairs(types.search_rows) do
+        if type(row_name) == "number" then
+            types.search_rows[row] = 1
+            types.search_rows[row_name] = nil
         end
     end
 end
