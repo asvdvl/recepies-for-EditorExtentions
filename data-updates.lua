@@ -72,35 +72,58 @@ local function is_item_has_craft(item_name)
     return false
 end
 
+local function get_right_table_by_value(value, pos_data, neg_data)
+    if value > 0 then
+        return pos_data
+    elseif value < 0 then
+        return neg_data
+    end
+end
 
 --functions for generating recepies
 local function module_processing(data)
+    --the part where the table of top items is created
+    local current_data
+    local effect_value = 0
+    local pos_data
+    local neg_data
     if not data.types_table.top_items.init then
         data.types_table.top_items.init = true
         data.types_table.top_items.data = {positie = {}, negative = {}}
-        local pos_data = data.types_table.top_items.data.positie
-        local neg_data = data.types_table.top_items.data.negative
-        local current_data
+        pos_data = data.types_table.top_items.data.positie
+        neg_data = data.types_table.top_items.data.negative
         for module, module_props in pairs(data.data_raw_category) do
             if not defines.recipes[module] then
-                for effect_name, effect_table in pairs(module_props.effect) do
-                    if effect_table.bonus > 0 then
-                        current_data = pos_data
-                    elseif effect_table.bonus < 0 then
-                        current_data = neg_data
-                    else
+                for effect_name, v in pairs(module_props.effect) do
+                    effect_value = v.bonus
+                    current_data = get_right_table_by_value(effect_value, pos_data, neg_data)
+                    if not current_data then
                         break   --to be shure
                     end
 
-                    if not current_data[effect_name] or (math.abs(effect_table.bonus) > math.abs(current_data[effect_name][2])) then
-                        current_data[effect_name] = {module, effect_table.bonus}
+                    if not current_data[effect_name] or (math.abs(effect_value) > math.abs(current_data[effect_name][2])) then
+                        current_data[effect_name] = {module, effect_value}
                     end
                 end
             end
         end
     end
+    pos_data = data.types_table.top_items.data.positie
+    neg_data = data.types_table.top_items.data.negative
 
-    data.recipe_object.ingredients = {}
+    --the part where the actual recipe generation happens
+    local ingredients = data.recipe_object.ingredients
+    local recipe_item_template = {type="item", name="fish", amount=65000}
+    for effect_name, v in pairs(data.data_raw_category[data.recipe_object.name].effect) do
+        effect_value = v.bonus --pull out the desired value from the table
+        current_data = get_right_table_by_value(effect_value, pos_data, neg_data)
+        if current_data[effect_name] then
+            local new_item = table.deepcopy(recipe_item_template)
+            new_item.name = current_data[effect_name][1]
+            new_item.amount = effect_value/current_data[effect_name][2]
+            table.insert(ingredients, new_item)
+        end
+    end
 end
 defines.set_function_by_keyword('modules', module_processing)
 
