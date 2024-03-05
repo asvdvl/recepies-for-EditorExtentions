@@ -44,7 +44,7 @@ local function find_diff_value(search_rows, item)
                 totalSum = totalSum + perfom_math_from_string(value, multiplier)
             end
         else
-            log('property `'..row_name..'` is `'..tostring(item[row_name])..'`. prototype '..item.name)
+            log('property `'..row_name..'` is `'..tostring(item[row_name])..'`. prototype `'..item.name..'` (just warning, you can just ignore this)')
         end
     end
     return totalSum
@@ -128,14 +128,17 @@ end
 defines.set_function_by_keyword('modules', module_processing)
 
 local function base_property_stuff(up_data)
-    local max_value_for_target_item = 0
+    local max_value_for_target_item = math.abs(find_diff_value(up_data.types_table.search_rows, up_data.data_raw_category[up_data.recipe_object.name]))
     local maxValue = 0
 
     for _, item in pairs(up_data.data_raw_category) do
         local pairValue = math.abs(find_diff_value(up_data.types_table.search_rows, item))
-        if item.name == up_data.recipe_object.name then
-            max_value_for_target_item = pairValue
-        elseif pairValue > maxValue and is_item_has_craft(item.name) then
+        if string.sub(item.name, 1, 3) ~= "ee-"         --checking that we are not working with an item from the EE mod
+            and (
+                pairValue < max_value_for_target_item   --checking that the item does not have stats higher than those from the EE mod
+                and maxValue < pairValue)               --checking that the item has stats greater than those already stored
+            and is_item_has_craft(item.name)
+        then
             maxValue = pairValue
             up_data.types_table.top_items = {item, pairValue}
         end
@@ -145,7 +148,7 @@ local function base_property_stuff(up_data)
     local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
     if amount > max_ingrigient_amount then
         --basicly in plans 
-        log('item '..up_data.recipe_object.name..' is too powerfull, calc amount of top ingredients is '..amount..' but allowed only '..max_ingrigient_amount)
+        log('item '..up_data.recipe_object.name..' is too powerfull, calc amount of top ingredients is '..amount..' but allowed only `'..max_ingrigient_amount)
         amount = max_ingrigient_amount
     end
     --data.types_table.top_items
@@ -202,6 +205,8 @@ for raw_type, types_table in pairs(defines.types) do
                 })
             if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
                 all_recipes[recipe].enabled = true
+            else
+                log('recipe `'..recipe..'` was defined but ingredients were not assigned')
             end
         end
     end

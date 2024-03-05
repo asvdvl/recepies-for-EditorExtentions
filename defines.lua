@@ -33,7 +33,7 @@ defines.recipes = {
     ["ee-super-pump"]={},
 
     --energy
-    --["ee-super-electric-pole"]={}, --this item is disabled due to its uselessness and the complexity of 2 different processings for 1 class
+    ["ee-super-electric-pole"]={},
     ["ee-super-fuel"]={
         type = defines.item_processing_prefix.."_generated",
         name_filter = "fuel",
@@ -142,7 +142,7 @@ defines.types = {
         search_rows = {"movement_bonus"}
     },
 
-    --energy related stuff but compatible with base_property
+    --energy related stuff but compatible with base_property(thanks flib)
     ["locomotive"] = {
         keyword = "base_property",
         search_rows = {"max_speed", "max_power"}
@@ -156,7 +156,12 @@ defines.types = {
     --with area
     ["radar"] = {
         keyword = "base_property",
-        search_rows = {["max_distance_of_sector_revealed"] = "^2", ["max_distance_of_nearby_sector_revealed"] = "^2"}
+        --[[
+            I ignore max_distance_of_sector_revealed("scan" radius)
+            due to the overlapping of these values ​​with each other when the game actually
+            scanning radius is calculated by active_radius * scanning_radius
+        ]]
+        search_rows = {["max_distance_of_nearby_sector_revealed"] = "^2"}
     },
 
     ["roboport"] = {
@@ -187,13 +192,11 @@ defines.types = {
     --other
     ["module"] = {
         keyword = "modules",
-        search_rows = {'effect'}
     },
 
     ["battery-equipment"] = {
         search_rows = {"energy_source/buffer_capacity"}
     },
-
 }
 
 --filling in all missing fields by default
@@ -227,5 +230,19 @@ function defines.set_function_by_keyword(keyword, func)
         end
     end
 end
+
+--[[
+    table for additional balancing
+    for example adding generators to “no consumption” items
+    or effects to modules that do not have corresponding modules in vanilla
+]]
+defines.balancingItemsTable = {
+    effects = {
+
+    },
+    energy = {
+
+    }
+}
 
 return defines
