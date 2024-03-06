@@ -233,16 +233,50 @@ end
 
 --[[
     table for additional balancing
-    for example adding generators to “no consumption” items
+    for example adding generators to "no power requirements" items
     or effects to modules that do not have corresponding modules in vanilla
 ]]
-defines.balancingItemsTable = {
-    effects = {
-
+defines.balancing_items_table = {
+    effect = {  --values ​​are written as EffectValue(https://lua-api.factorio.com/latest/types/EffectValue.html), because this is only needed to compensate for the effects of the modules
+        positive = {
+            pollution = {
+                ["flamethrower-ammo"] = {0.1, 1}, --1 item can create up to 5 units of pollution
+            },
+            consumption = {
+                ["copper-cable"] = {1, 125}       --according to my calculations, 1 cable is capable of transmitting ~3 kW, which means that to add 100% to 3 assemblers you need 125 cables
+            },
+            --speed = {},                         --disabled due to the presence of a direct effect supplier
+            --productivity = {}                   --same as with speed effect
+        },
+        negative = {
+            pollution = {
+                wood = {-0.01, 50},               --wood absorbs pollution
+            },
+            --consumption = {},                   --same as with positive speed effect
+            speed = {
+                ["heavy-oil-barrel"] = {-0.1, 50} --let's imagine that this module pours fuel oil onto the gears, causing a slowdown :)
+            },
+            productivity = {
+                ["raw-fish"] = {0.01, 1}          --I have no idea what to put here, but a module with this effect is not needed at all
+            }
+        }
     },
     energy = {
+        heat = {
 
+        },
+        electric = {
+
+        },
+        battery = {
+
+        }
     }
 }
+
+--filling out a table for energy where the “best items” are not known in advance
+function defines.init_balancing_items_table() --must be called from code with access to data.raw
+    
+end
 
 return defines

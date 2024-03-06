@@ -89,8 +89,8 @@ local function module_processing(data)
     local neg_data
     if not data.types_table.top_items.init then
         data.types_table.top_items.init = true
-        data.types_table.top_items.data = {positie = {}, negative = {}}
-        pos_data = data.types_table.top_items.data.positie
+        data.types_table.top_items.data = {positive = {}, negative = {}}
+        pos_data = data.types_table.top_items.data.positive
         neg_data = data.types_table.top_items.data.negative
         for module, module_props in pairs(data.data_raw_category) do
             if not defines.recipes[module] then
@@ -108,7 +108,7 @@ local function module_processing(data)
             end
         end
     end
-    pos_data = data.types_table.top_items.data.positie
+    pos_data = data.types_table.top_items.data.positive
     neg_data = data.types_table.top_items.data.negative
 
     --the part where the actual recipe generation happens
