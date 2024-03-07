@@ -3,6 +3,7 @@ local get_energy_value = require("__flib__/data-util").get_energy_value
 --recipes for which I can find legal crafting
 local defines = require("defines")
 local recipes = defines.recipes
+defines.init_balancing_items_table(data.raw, settings.startup)
 
 --allows to specify some "code" in a string that is executed here. for example (25, '^2') -> 625
 local function perfom_math_from_string(x, multiplier)
@@ -85,18 +86,16 @@ local function module_processing(data)
     --the part where the table of top items is created
     local current_data
     local effect_value = 0
-    local pos_data
-    local neg_data
-    if not data.types_table.top_items.init then
-        data.types_table.top_items.init = true
+    if not data.types_table.top_items.data then
         data.types_table.top_items.data = {positive = {}, negative = {}}
-        pos_data = data.types_table.top_items.data.positive
-        neg_data = data.types_table.top_items.data.negative
+    end
+    local top_items_data = data.types_table.top_items.data
+    if not data.types_table.top_items.init then
         for module, module_props in pairs(data.data_raw_category) do
             if not defines.recipes[module] then
                 for effect_name, v in pairs(module_props.effect) do
                     effect_value = v.bonus
-                    current_data = get_right_table_by_value(effect_value, pos_data, neg_data)
+                    current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
                     if not current_data then
                         break   --to be shure
                     end
@@ -107,20 +106,29 @@ local function module_processing(data)
                 end
             end
         end
+        data.types_table.top_items.init = true
     end
-    pos_data = data.types_table.top_items.data.positive
-    neg_data = data.types_table.top_items.data.negative
 
     --the part where the actual recipe generation happens
     local ingredients = data.recipe_object.ingredients
+    local fallback_effects = defines.balancing_items_table.effect
     local recipe_item_template = {type="item", name="fish", amount=65000}
     for effect_name, v in pairs(data.data_raw_category[data.recipe_object.name].effect) do
         effect_value = v.bonus --pull out the desired value from the table
-        current_data = get_right_table_by_value(effect_value, pos_data, neg_data)
-        if current_data[effect_name] then
+        current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
+        current_data_fallback_from_defines = get_right_table_by_value(effect_value, fallback_effects.positive, fallback_effects.negative)
+        if current_data[effect_name] or current_data_fallback_from_defines[effect_name] then
             local new_item = table.deepcopy(recipe_item_template)
-            new_item.name = current_data[effect_name][1]
-            new_item.amount = effect_value/current_data[effect_name][2]
+            local effect_table = current_data[effect_name] or current_data_fallback_from_defines[effect_name]
+            if ((current_data[effect_name] and current_data_fallback_from_defines[effect_name])
+                    and current_data[effect_name][2] <= current_data_fallback_from_defines[effect_name][2]
+                )
+                or (current_data_fallback_from_defines[effect_name] and settings.startup["rfEE_always_overwrite_from_balancing"].value)
+            then
+                effect_table = current_data_fallback_from_defines[effect_name]
+            end
+            new_item.name = effect_table[1]
+            new_item.amount = math.ceil(effect_value/effect_table[2])
             table.insert(ingredients, new_item)
         end
     end
@@ -145,12 +153,7 @@ local function base_property_stuff(up_data)
     end
 
     local amount = math.ceil(max_value_for_target_item/up_data.types_table.top_items[2])
-    local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
-    if amount > max_ingrigient_amount then
-        --basicly in plans 
-        log('item '..up_data.recipe_object.name..' is too powerfull, calc amount of top ingredients is '..amount..' but allowed only `'..max_ingrigient_amount)
-        amount = max_ingrigient_amount
-    end
+
     --data.types_table.top_items
     up_data.recipe_object.ingredients = {
         {type="item",
@@ -217,5 +220,19 @@ for _, prototype in pairs(data.raw["assembling-machine"]) do
     local _, _, proto_name = string.find(prototype.name, "(.+)-%d+$")
     if proto_name == "assembling-machine" then
         table.insert(prototype.crafting_categories, "ee-testing-tool")
+    end
+end
+
+--fixing amount of ingridients(there are plans to “fix” too expensive items here)
+for recipe, table in pairs(recipes) do
+    local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
+    for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
+        local amount = recipe_row.amount
+        if amount > max_ingrigient_amount then
+            --basicly in plans 
+            log('item '..all_recipes[recipe].name..' is too powerfull, calc amount of top ingredient '..recipe_row.name..' is '..amount..' but allowed only `'..max_ingrigient_amount)
+            amount = max_ingrigient_amount
+        end
+        recipe_row.amount = amount
     end
 end
