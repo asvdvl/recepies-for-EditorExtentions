@@ -45,7 +45,7 @@ local function find_diff_value(search_rows, item)
                 totalSum = totalSum + perfom_math_from_string(value, multiplier)
             end
         else
-            log('property `'..row_name..'` is `'..tostring(item[row_name])..'`. prototype `'..item.name..'` (just warning, you can just ignore this)')
+            log('property `'..row_name..'` is `'..tostring(item[row_name])..'`. prototype `'..item.name..'` (just warning, you can ignore this)')
         end
     end
     return totalSum
@@ -82,55 +82,56 @@ local function get_right_table_by_value(value, pos_data, neg_data)
 end
 
 --functions for generating recepies
-local function module_processing(data)
-    --the part where the table of top items is created
-    local current_data
+----I decided to make this function as a separate one to make it easier to read
+local function module_top_items_prepairing(data_raw_category, top_items)
     local effect_value = 0
-    if not data.types_table.top_items.data then
-        data.types_table.top_items.data = {positive = {}, negative = {}}
-    end
-    local top_items_data = data.types_table.top_items.data
-    if not data.types_table.top_items.init then
-        for module, module_props in pairs(data.data_raw_category) do
-            if not defines.recipes[module] then
-                for effect_name, v in pairs(module_props.effect) do
-                    effect_value = v.bonus
-                    current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
-                    if not current_data then
-                        break   --to be shure
-                    end
+    local current_data
+    top_items.data = defines.balancing_items_table.effect
+    local top_items_data = top_items.data
 
-                    if not current_data[effect_name] or (math.abs(effect_value) > math.abs(current_data[effect_name][2])) then
-                        current_data[effect_name] = {module, effect_value}
-                    end
+    if settings.startup["rfEE_always_overwrite_from_balancing"].value then
+        return
+    end
+
+    for module, module_props in pairs(data_raw_category) do
+        if not defines.recipes[module] then
+            for effect_name, v in pairs(module_props.effect) do
+                effect_value = v.bonus
+                current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
+
+                if not current_data then    --current_data has missing effects, but fallback items shouldn't have them
+                    break
+                end
+
+                if not current_data[effect_name] or (math.abs(effect_value) > math.abs(current_data[effect_name][2])) then
+                    current_data[effect_name] = {module, effect_value}
                 end
             end
         end
-        data.types_table.top_items.init = true
     end
+end
+
+local function module_processing(m_data)
+    --the part where the table of top items is created
+    local effect_value = 0
+
+    if not m_data.types_table.top_items.data then
+        module_top_items_prepairing(m_data.data_raw_category, m_data.types_table.top_items)
+    end
+    local top_items_data = m_data.types_table.top_items.data
 
     --the part where the actual recipe generation happens
-    local ingredients = data.recipe_object.ingredients
-    local fallback_effects = defines.balancing_items_table.effect
+    local ingredients = m_data.recipe_object.ingredients
     local recipe_item_template = {type="item", name="fish", amount=65000}
-    for effect_name, v in pairs(data.data_raw_category[data.recipe_object.name].effect) do
+    for effect_name, v in pairs(m_data.data_raw_category[m_data.recipe_object.name].effect) do
         effect_value = v.bonus --pull out the desired value from the table
         current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
-        current_data_fallback_from_defines = get_right_table_by_value(effect_value, fallback_effects.positive, fallback_effects.negative)
-        if current_data[effect_name] or current_data_fallback_from_defines[effect_name] then
-            local new_item = table.deepcopy(recipe_item_template)
-            local effect_table = current_data[effect_name] or current_data_fallback_from_defines[effect_name]
-            if ((current_data[effect_name] and current_data_fallback_from_defines[effect_name])
-                    and current_data[effect_name][2] <= current_data_fallback_from_defines[effect_name][2]
-                )
-                or (current_data_fallback_from_defines[effect_name] and settings.startup["rfEE_always_overwrite_from_balancing"].value)
-            then
-                effect_table = current_data_fallback_from_defines[effect_name]
-            end
-            new_item.name = effect_table[1]
-            new_item.amount = math.ceil(effect_value/effect_table[2])
-            table.insert(ingredients, new_item)
-        end
+        local new_item = table.deepcopy(recipe_item_template)
+        local effect_table = current_data[effect_name]
+
+        new_item.name = effect_table[1]
+        new_item.amount = math.ceil(effect_value/effect_table[2])
+        table.insert(ingredients, new_item)
     end
 end
 defines.set_function_by_keyword('modules', module_processing)
