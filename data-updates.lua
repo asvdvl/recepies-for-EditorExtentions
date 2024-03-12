@@ -86,7 +86,7 @@ end
 local function module_top_items_prepairing(data_raw_category, top_items)
     local effect_value = 0
     local current_data
-    top_items.data = defines.balancing_items_table.effect
+    top_items.data = defines.balancing_items_table.effect   --this will rewrite the defines table but I don’t care, having 2 tables is useless and leads to code bloat
     local top_items_data = top_items.data
 
     if settings.startup["rfEE_always_overwrite_from_balancing"].value then
@@ -111,26 +111,78 @@ local function module_top_items_prepairing(data_raw_category, top_items)
     end
 end
 
+--checking that the solution satisfies the condition
+local function is_solution_are_found(current_effects, top_items_data)
+    local top_effect_val
+    for effect_name, effect_value in pairs(current_effects) do
+        top_effect_val = get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
+        if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
+            return false
+        end
+    end
+    return true
+end
+
 local function module_processing(m_data)
     --the part where the table of top items is created
-    local effect_value = 0
+    local effect_value, effect_value_2 = 0, 0
+    local data_raw_category = m_data.data_raw_category
+    local recipe_object = m_data.recipe_object
+    local types_table = m_data.types_table
 
-    if not m_data.types_table.top_items.data then
-        module_top_items_prepairing(m_data.data_raw_category, m_data.types_table.top_items)
+    if not types_table.top_items.data then
+        module_top_items_prepairing(data_raw_category, types_table.top_items)
     end
-    local top_items_data = m_data.types_table.top_items.data
+    local top_items_data = types_table.top_items.data
 
     --the part where the actual recipe generation happens
-    local ingredients = m_data.recipe_object.ingredients
+    local ingredients = recipe_object.ingredients
     local recipe_item_template = {type="item", name="fish", amount=65000}
-    for effect_name, v in pairs(m_data.data_raw_category[m_data.recipe_object.name].effect) do
-        effect_value = v.bonus --pull out the desired value from the table
-        current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
-        local new_item = table.deepcopy(recipe_item_template)
-        local effect_table = current_data[effect_name]
 
-        new_item.name = effect_table[1]
-        new_item.amount = math.ceil(effect_value/effect_table[2])
+    --[[
+        some combinatorial optimization starts from here,
+        if you want to keep your psyche healthy,
+        scroll through with your eyes closed(JK)
+
+        I also work only with top_items_data because I don’t want to complicate the already cumbersome code
+    ]]
+    --First we set the target effect
+    local current_effects = {}
+    local ingridients_raw = {}
+    for effect_name, v in pairs(data_raw_category[recipe_object.name].effect) do
+        effect_value = v.bonus --pull out the desired value from the table
+        current_effects[effect_name] = effect_value
+    end
+
+    local amount = 0
+    while not is_solution_are_found(current_effects, top_items_data) do
+        for effect_name, effect_value in pairs(current_effects) do
+            top_effect_val = get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
+            if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
+                amount = math.ceil(math.abs(top_effect_val[2]/effect_value))
+                if ingridients_raw[top_effect_val[1]] then
+                    ingridients_raw[top_effect_val[1]] = ingridients_raw[top_effect_val[1]] + amount
+                else
+                    ingridients_raw[top_effect_val[1]] = amount
+                end
+
+                if data_raw_category[top_effect_val[1]] then
+                    for effect_name_2, v in pairs(data_raw_category[top_effect_val[1]].effect) do
+                        effect_value_2 = v.bonus
+                        current_effects[effect_name_2] = (current_effects[effect_name_2] or 0) - (effect_value_2*amount)
+                    end
+                else
+                    current_effects[effect_name] = current_effects[effect_name] - (top_effect_val[2]*amount)
+                end
+            end
+        end
+    end
+    amount = nil
+
+    for ingredients_name, amount in pairs(ingridients_raw) do
+        local new_item = table.deepcopy(recipe_item_template)
+        new_item.name = ingredients_name
+        new_item.amount = amount
         table.insert(ingredients, new_item)
     end
 end
@@ -200,7 +252,7 @@ for raw_type, types_table in pairs(defines.types) do
     func_apply_recipe = types_table.func
     for recipe, table in pairs(recipes) do
         if data.raw[raw_type][recipe] then
-            func_apply_recipe(
+            func_apply_recipe(  --the only reason why I put everything in a table is that in functions I can simply pull out the data that I need without fiddling with input variables
                 {
                     data_raw_category = data.raw[raw_type],
                     recipe_object = all_recipes[recipe],
