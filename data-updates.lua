@@ -74,7 +74,7 @@ local function is_item_has_craft(item_name)
 end
 
 local function get_right_table_by_value(value, pos_data, neg_data)
-    if value > 0 then
+    if value >= 0 then
         return pos_data
     elseif value < 0 then
         return neg_data
@@ -145,21 +145,23 @@ local function module_processing(m_data)
         scroll through with your eyes closed(JK)
 
         I also work only with top_items_data because I don’t want to complicate the already cumbersome code
+        and as I know there are solutions through matrices but I don’t want to suffer with it
     ]]
     --First we set the target effect
     local current_effects = {}
     local ingridients_raw = {}
     for effect_name, v in pairs(data_raw_category[recipe_object.name].effect) do
         effect_value = v.bonus --pull out the desired value from the table
-        current_effects[effect_name] = effect_value
+        current_effects[effect_name] = effect_value + effect_value*((settings.startup["rfEE_recipes_ingredient_increase_percent"].value/100)-1)
     end
 
+    --now we can start looking for the number of items in the recipe
     local amount = 0
     while not is_solution_are_found(current_effects, top_items_data) do
         for effect_name, effect_value in pairs(current_effects) do
             top_effect_val = get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
             if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
-                amount = math.ceil(math.abs(top_effect_val[2]/effect_value))
+                amount = math.ceil(math.abs(effect_value/top_effect_val[2]))
                 if ingridients_raw[top_effect_val[1]] then
                     ingridients_raw[top_effect_val[1]] = ingridients_raw[top_effect_val[1]] + amount
                 else
@@ -211,7 +213,7 @@ local function base_property_stuff(up_data)
     up_data.recipe_object.ingredients = {
         {type="item",
         name=up_data.types_table.top_items[1].name,
-        amount=amount}
+        amount=amount + amount*((settings.startup["rfEE_recipes_ingredient_increase_percent"].value/100)-1)}
     }
 end
 defines.set_function_by_keyword('base_property', base_property_stuff)

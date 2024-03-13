@@ -19,6 +19,14 @@ data:extend({
         order = "b"
     },
     {
+        type = "int-setting",
+        name = prefixes.mod.."recipes_ingredient_increase_percent",
+        setting_type = "startup",
+        default_value = 120,
+        minimum_value = 0,
+        order = "c"
+    },
+    {
         type = "bool-setting",
         name = prefixes.mod.."always_overwrite_from_balancing",
         setting_type = "startup",
