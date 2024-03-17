@@ -58,7 +58,7 @@ for effect_sign, effect_names in pairs(defines.balancing_items_table.effect) do
             },
         })
         --only needed for automatic generation strings for locale
-        log(prefixes.mod..effect_sign..prefixes.balancing..prefixes.name..effect_name)
-        log(prefixes.mod..effect_sign..prefixes.balancing..prefixes.value..effect_name)
+        --log(prefixes.mod..effect_sign..prefixes.balancing..prefixes.name..effect_name)
+        --log(prefixes.mod..effect_sign..prefixes.balancing..prefixes.value..effect_name)
     end
 end

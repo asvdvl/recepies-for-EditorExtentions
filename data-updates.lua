@@ -4,6 +4,39 @@ local get_energy_value = require("__flib__/data-util").get_energy_value
 local defines = require("defines")
 local recipes = defines.recipes
 defines.init_balancing_items_table(data.raw, settings.startup)
+local local_defines = {}
+
+--a hash tables is used here for a quick search; the fields can have any value
+local_defines.fpc_delay_this_categories = { 
+    ["item"] = true,
+}
+local_defines.fpc_blacklist_categories = {
+    ["recipe"] = true,
+    ["font"] = true,
+    ["noise-layer"] = true,
+    ["gui-style"] = true,
+    ["utility-constants"] = true,
+    ["utility-sounds"] = true,
+    ["sprite"] = true,
+    ["utility-sprites"] = true,
+    ["god-controller"] = true,
+    ["editor-controller"] = true,
+    ["spectator-controller"] = true,
+    ["noise-expression"] = true,
+    ["mouse-cursor"] = true,
+    ["custom-input"] = true,
+    ["item-with-entity-data"] = true,
+    ["technology"] = true,
+}
+local_defines.energy_fields = {
+    ["energy_usage"]=true,
+    ["energy_per_movement"]=true,
+    ["energy_per_rotation"]=true,
+    ["power"]=true,
+    ["energy_consumption"]=true,
+    ["energy_per_move"]=true,
+    ["max_power"]=true
+}
 
 --allows to specify some "code" in a string that is executed here. for example (25, '^2') -> 625
 local function perfom_math_from_string(x, multiplier)
@@ -52,8 +85,6 @@ local function find_diff_value(search_rows, item)
 end
 
 local function is_item_has_craft(item_name)
-    --by some reason, here all_recipes is nil, and idk why
-    all_recipes = data.raw.recipe
     if all_recipes[item_name] and #all_recipes[item_name].ingredients > 0 then
         return true
     else
@@ -78,6 +109,42 @@ local function get_right_table_by_value(value, pos_data, neg_data)
         return pos_data
     elseif value < 0 then
         return neg_data
+    end
+end
+
+--fpc = find_prototype_category
+local fpc_cache, fpc_delayed = {}, {}
+local function find_prototype_category_logic(category_name, category_data, item_name)
+    if not local_defines.fpc_blacklist_categories[category_name] then
+        if category_data[item_name] then
+            if not fpc_cache[item_name] then
+                fpc_cache[item_name] = {category_name}
+            else
+                table.insert(fpc_cache[item_name], category_name)
+            end
+            return true
+        end
+    end
+end
+
+local function find_prototype_category(item_name)
+    if fpc_cache[item_name] then
+        return fpc_cache[item_name][1]  --here return only 1 
+    end
+
+    for category_name, category_data in pairs(data.raw) do
+        if not local_defines.fpc_delay_this_categories[category_name] then
+            find_prototype_category_logic(category_name, category_data, item_name)
+        else
+            fpc_delayed[category_name] = true
+        end
+    end
+
+    for category_name, _ in pairs(fpc_delayed) do
+        find_prototype_category_logic(category_name, data.raw[category_name], item_name)
+    end
+    if fpc_cache[item_name] then
+        return fpc_cache[item_name][1]  --here return only 1 
     end
 end
 
@@ -111,7 +178,7 @@ local function module_top_items_prepairing(data_raw_category, top_items)
     end
 end
 
---checking that the solution satisfies the condition
+--checking that the solution satisfies the condition(for modules)
 local function is_solution_are_found(current_effects, top_items_data)
     local top_effect_val
     for effect_name, effect_value in pairs(current_effects) do
@@ -123,12 +190,9 @@ local function is_solution_are_found(current_effects, top_items_data)
     return true
 end
 
-local function module_processing(m_data)
+local function module_processing(data_raw_category, recipe_object, recipes_table, types_table)
     --the part where the table of top items is created
     local effect_value, effect_value_2 = 0, 0
-    local data_raw_category = m_data.data_raw_category
-    local recipe_object = m_data.recipe_object
-    local types_table = m_data.types_table
 
     if not types_table.top_items.data then
         module_top_items_prepairing(data_raw_category, types_table.top_items)
@@ -190,12 +254,12 @@ local function module_processing(m_data)
 end
 defines.set_function_by_keyword('modules', module_processing)
 
-local function base_property_stuff(up_data)
-    local max_value_for_target_item = math.abs(find_diff_value(up_data.types_table.search_rows, up_data.data_raw_category[up_data.recipe_object.name]))
+local function base_property_stuff(data_raw_category, recipe_object, recipes_table, types_table)
+    local max_value_for_target_item = math.abs(find_diff_value(types_table.search_rows, data_raw_category[recipe_object.name]))
     local maxValue = 0
 
-    for _, item in pairs(up_data.data_raw_category) do
-        local pairValue = math.abs(find_diff_value(up_data.types_table.search_rows, item))
+    for _, item in pairs(data_raw_category) do
+        local pairValue = math.abs(find_diff_value(types_table.search_rows, item))
         if string.sub(item.name, 1, 3) ~= "ee-"         --checking that we are not working with an item from the EE mod
             and (
                 pairValue < max_value_for_target_item   --checking that the item does not have stats higher than those from the EE mod
@@ -203,47 +267,42 @@ local function base_property_stuff(up_data)
             and is_item_has_craft(item.name)
         then
             maxValue = pairValue
-            up_data.types_table.top_items = {item, pairValue}
+            types_table.top_items = {item, pairValue}
         end
     end
 
-    local amount = math.ceil(max_value_for_target_item/up_data.types_table.top_items[2])
+    local amount = math.ceil(max_value_for_target_item/types_table.top_items[2])
 
     --data.types_table.top_items
-    up_data.recipe_object.ingredients = {
+    recipe_object.ingredients = {
         {type="item",
-        name=up_data.types_table.top_items[1].name,
+        name=types_table.top_items[1].name,
         amount=amount + amount*((settings.startup["rfEE_recipes_ingredient_increase_percent"].value/100)-1)}
     }
 end
 defines.set_function_by_keyword('base_property', base_property_stuff)
 
 --this function falls out of the principle of "code universality" that I adhere to, but I’m tired of putting all these filters in defined.lua
-local function item_processing(data)
-    if string.find(data.recipes_table.type, defines.item_processing_prefix) then
+local function item_processing(data_raw_category, recipe_object, recipes_table, types_table)
+    if string.find(recipes_table.type, defines.item_processing_prefix) then
         local fake_data_raw_category = {}
-        for item_name, item_table in pairs(data.data_raw_category) do
-            if string.find(item_name, data.recipes_table.name_filter) then
+        for item_name, item_table in pairs(data_raw_category) do
+            if string.find(item_name, recipes_table.name_filter) then
                 fake_data_raw_category[item_name] = item_table
             end
         end
 
-        base_property_stuff({
-            data_raw_category = fake_data_raw_category,
-            recipe_object = data.recipe_object,
-            --recipes_table = data.recipes_table,    --not needed
-            types_table = data.recipes_table,
-        })
+        base_property_stuff(fake_data_raw_category, recipe_object, recipes_table, recipes_table)
     end
 end
 defines.set_function_by_keyword('items', item_processing)
 
-local function defined_stuff(data)
-    if data.recipes_table.type == "defined" then
-        data.recipe_object.ingredients = data.recipes_table.recipe
+local function defined_stuff(data_raw_category, recipe_object, recipes_table, types_table)
+    if recipes_table.type == "defined" then
+        recipe_object.ingredients = recipes_table.recipe
     else
         log('-----------------------------------------------------------')
-        log('recipe category mark as defined but recipe mark as '..data.recipes_table.type..'! '..data.recipe_object.name)
+        log('recipe category mark as defined but recipe mark as '..recipes_table.type..'! '..recipe_object.name)
         log('-----------------------------------------------------------')
     end
 end
@@ -253,14 +312,9 @@ defines.set_function_by_keyword('defined', defined_stuff)
 for raw_type, types_table in pairs(defines.types) do
     func_apply_recipe = types_table.func
     for recipe, table in pairs(recipes) do
-        if data.raw[raw_type][recipe] then
-            func_apply_recipe(  --the only reason why I put everything in a table is that in functions I can simply pull out the data that I need without fiddling with input variables
-                {
-                    data_raw_category = data.raw[raw_type],
-                    recipe_object = all_recipes[recipe],
-                    recipes_table = table,
-                    types_table = types_table,
-                })
+        if data.raw[raw_type][recipe] --[[and not table.raw_category_name]] then
+            func_apply_recipe(data.raw[raw_type], all_recipes[recipe], table, types_table)
+            --table.raw_category_name = raw_type  --needed to speed up processing in the for loop below
             if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
                 all_recipes[recipe].enabled = true
             else
@@ -269,6 +323,7 @@ for raw_type, types_table in pairs(defines.types) do
         end
     end
 end
+defines.init_balancing_items_table_post_recepies_process(data.raw, settings.startup)
 
 --allow assemblers to make new recepies
 for _, prototype in pairs(data.raw["assembling-machine"]) do
@@ -278,11 +333,28 @@ for _, prototype in pairs(data.raw["assembling-machine"]) do
     end
 end
 
---fixing amount of ingridients(there are plans to “fix” too expensive items here)
+local entity, amount, power_req
+local energy_source_fields = {["input_flow_limit"]=true}
 for recipe, table in pairs(recipes) do
+    --fixing amount of ingridients
+    --there are plans to “fix” too expensive items here
     local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
     for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
-        local amount = recipe_row.amount
+        --fix "free energy items" here
+        entity = data.raw[find_prototype_category(recipe_row.name)][recipe_row.name]
+        if table.type ~= "defined" then
+            power_req = 0
+            if entity.energy_source then
+                for key in pairs(energy_source_fields) do
+                    power_req = power_req + (get_energy_value(entity.energy_source[key] or 0) or 0)
+                end
+            end
+            for key in pairs(local_defines.energy_fields) do
+                power_req = power_req + (get_energy_value(entity[key] or 0) or 0)
+            end
+        end
+
+        amount = recipe_row.amount
         if amount > max_ingrigient_amount then
             --basicly in plans 
             log('item '..all_recipes[recipe].name..' is too powerfull, calc amount of top ingredient '..recipe_row.name..' is '..amount..' but allowed only `'..max_ingrigient_amount)

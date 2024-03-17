@@ -83,12 +83,9 @@ for _, value in pairs(defines.recipes) do
     end
 end
 
-local function empty_function(...)
-    local table = {...}
-    if table[1] and table[1]["recipe_object"] then
-        log('empty_function call detected! this shouldnt have happened! prototype: '..table[1].recipe_object.name)
-    else
-        log('empty_function call detected! this shouldnt have happened! params: '..serpent.block(table))
+local function empty_function(data_raw_category, recipe_object--[[, recipes_table, types_table]])
+    if recipe_object then
+        log('empty_function call detected! this shouldnt have happened! prototype: '..recipe_object.name)
     end
 end
 
@@ -287,6 +284,7 @@ end
 
 --filling out a table for energy where the “best items” are not known in advance
 function defines.init_balancing_items_table(data_raw, settings_startup) --must be called from code with access to data.raw
+    --modules
     local effect_table
     for setting_name, value in pairs(settings_startup) do
         if setting_name:sub(1, #defines.prefixes.mod) == defines.prefixes.mod then
@@ -301,6 +299,11 @@ function defines.init_balancing_items_table(data_raw, settings_startup) --must b
             end
         end
     end
+end
+
+function defines.init_balancing_items_table_post_recepies_process(data_raw, settings_startup)
+    --energy
+    
 end
 
 return defines
