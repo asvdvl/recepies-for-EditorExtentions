@@ -5,29 +5,9 @@ local defines = require("defines")
 local recipes = defines.recipes
 defines.init_balancing_items_table(data.raw, settings.startup)
 local local_defines = {}
+local utils = require("utils")
+local is_item_NOT_from_EE = utils.is_item_NOT_from_EE
 
---a hash tables is used here for a quick search; the fields can have any value
-local_defines.fpc_delay_this_categories = { 
-    ["item"] = true,
-}
-local_defines.fpc_blacklist_categories = {
-    ["recipe"] = true,
-    ["font"] = true,
-    ["noise-layer"] = true,
-    ["gui-style"] = true,
-    ["utility-constants"] = true,
-    ["utility-sounds"] = true,
-    ["sprite"] = true,
-    ["utility-sprites"] = true,
-    ["god-controller"] = true,
-    ["editor-controller"] = true,
-    ["spectator-controller"] = true,
-    ["noise-expression"] = true,
-    ["mouse-cursor"] = true,
-    ["custom-input"] = true,
-    ["item-with-entity-data"] = true,
-    ["technology"] = true,
-}
 local_defines.energy_fields = {
     ["energy_usage"]=true,
     ["energy_per_movement"]=true,
@@ -37,23 +17,6 @@ local_defines.energy_fields = {
     ["energy_per_move"]=true,
     ["max_power"]=true
 }
-
---allows to specify some "code" in a string that is executed here. for example (25, '^2') -> 625
-local function perfom_math_from_string(x, multiplier)
-    local func, errorMsg = load("return "..x..multiplier)
-    if func then
-        local status, result = pcall(func)
-        if status then
-            return result
-        else
-            error('error when executing expression ('..x..', '..multiplier..') by reason '..result)
-            return x
-        end
-    else
-        error('error when executing expression ('..x..', '..multiplier..') by reason '..errorMsg)
-        return x
-    end
-end
 
 --[[
     a function that returns the "sum" of properties for a specified entity,
@@ -75,77 +38,13 @@ local function find_diff_value(search_rows, item)
             if type(multiplier) == "number" then
                 totalSum = totalSum + (value * multiplier)
             elseif type(multiplier) == "string" then
-                totalSum = totalSum + perfom_math_from_string(value, multiplier)
+                totalSum = totalSum + utils.perfom_math_from_string(value, multiplier)
             end
         else
             log('property `'..row_name..'` is `'..tostring(item[row_name])..'`. prototype `'..item.name..'` (just warning, you can ignore this)')
         end
     end
     return totalSum
-end
-
-local function is_item_has_craft(item_name)
-    if all_recipes[item_name] and #all_recipes[item_name].ingredients > 0 then
-        return true
-    else
-        --hello wube, i love you...
-        for _, recipe in pairs(all_recipes) do
-            if recipe.result == item_name then
-                return true
-            elseif recipe.results then
-                for _, results in pairs(recipe.results) do
-                    if results.name == item_name then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    return false
-end
-
-local function get_right_table_by_value(value, pos_data, neg_data)
-    if value >= 0 then
-        return pos_data
-    elseif value < 0 then
-        return neg_data
-    end
-end
-
---fpc = find_prototype_category
-local fpc_cache, fpc_delayed = {}, {}
-local function find_prototype_category_logic(category_name, category_data, item_name)
-    if not local_defines.fpc_blacklist_categories[category_name] then
-        if category_data[item_name] then
-            if not fpc_cache[item_name] then
-                fpc_cache[item_name] = {category_name}
-            else
-                table.insert(fpc_cache[item_name], category_name)
-            end
-            return true
-        end
-    end
-end
-
-local function find_prototype_category(item_name)
-    if fpc_cache[item_name] then
-        return fpc_cache[item_name][1]  --here return only 1 
-    end
-
-    for category_name, category_data in pairs(data.raw) do
-        if not local_defines.fpc_delay_this_categories[category_name] then
-            find_prototype_category_logic(category_name, category_data, item_name)
-        else
-            fpc_delayed[category_name] = true
-        end
-    end
-
-    for category_name, _ in pairs(fpc_delayed) do
-        find_prototype_category_logic(category_name, data.raw[category_name], item_name)
-    end
-    if fpc_cache[item_name] then
-        return fpc_cache[item_name][1]  --here return only 1 
-    end
 end
 
 --functions for generating recepies
@@ -164,7 +63,7 @@ local function module_top_items_prepairing(data_raw_category, top_items)
         if not defines.recipes[module] then
             for effect_name, v in pairs(module_props.effect) do
                 effect_value = v.bonus
-                current_data = get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
+                current_data = utils.get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
 
                 if not current_data then    --current_data has missing effects, but fallback items shouldn't have them
                     break
@@ -182,7 +81,7 @@ end
 local function is_solution_are_found(current_effects, top_items_data)
     local top_effect_val
     for effect_name, effect_value in pairs(current_effects) do
-        top_effect_val = get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
+        top_effect_val = utils.get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
         if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
             return false
         end
@@ -223,7 +122,7 @@ local function module_processing(data_raw_category, recipe_object, recipes_table
     local amount = 0
     while not is_solution_are_found(current_effects, top_items_data) do
         for effect_name, effect_value in pairs(current_effects) do
-            top_effect_val = get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
+            top_effect_val = utils.get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
             if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
                 amount = math.ceil(math.abs(effect_value/top_effect_val[2]))
                 if ingridients_raw[top_effect_val[1]] then
@@ -243,7 +142,6 @@ local function module_processing(data_raw_category, recipe_object, recipes_table
             end
         end
     end
-    amount = nil
 
     for ingredients_name, amount in pairs(ingridients_raw) do
         local new_item = table.deepcopy(recipe_item_template)
@@ -260,11 +158,11 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
 
     for _, item in pairs(data_raw_category) do
         local pairValue = math.abs(find_diff_value(types_table.search_rows, item))
-        if string.sub(item.name, 1, 3) ~= "ee-"         --checking that we are not working with an item from the EE mod
+        if is_item_NOT_from_EE(item.name)
             and (
                 pairValue < max_value_for_target_item   --checking that the item does not have stats higher than those from the EE mod
                 and maxValue < pairValue)               --checking that the item has stats greater than those already stored
-            and is_item_has_craft(item.name)
+            and utils.is_item_has_technology(item.name)
         then
             maxValue = pairValue
             types_table.top_items = {item, pairValue}
@@ -333,7 +231,7 @@ for _, prototype in pairs(data.raw["assembling-machine"]) do
     end
 end
 
-local entity, amount, power_req
+local entity, amount, power_req = {}, 0, 0
 local energy_source_fields = {["input_flow_limit"]=true}
 for recipe, table in pairs(recipes) do
     --fixing amount of ingridients
@@ -341,7 +239,7 @@ for recipe, table in pairs(recipes) do
     local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
     for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
         --fix "free energy items" here
-        entity = data.raw[find_prototype_category(recipe_row.name)][recipe_row.name]
+        entity = data.raw[utils.find_prototype_category(recipe_row.name)][recipe_row.name]
         if table.type ~= "defined" then
             power_req = 0
             if entity.energy_source then

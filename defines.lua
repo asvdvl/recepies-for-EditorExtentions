@@ -265,6 +265,7 @@ defines.balancing_items_table = {
     }
 }
 
+--definitions for settings
 defines.prefixes = {
     mod = "rfEE",
     balancing = "_balancing",
