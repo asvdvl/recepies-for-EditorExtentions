@@ -33,6 +33,13 @@ data:extend({
         default_value = false,
         order = "x"
     },
+    {
+        type = "string-setting",
+        name = prefixes.mod.."type_of_compensation_category",
+        setting_type = "startup",
+        default_value = "generator-equipment",
+        order = "x"
+    },
 })
 
 for effect_sign, effect_names in pairs(defines.balancing_items_table.effect) do

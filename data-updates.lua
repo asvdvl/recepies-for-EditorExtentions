@@ -207,17 +207,18 @@ end
 defines.set_function_by_keyword('defined', defined_stuff)
 
 --main cycle for apply/calc all recepies
+local processed_items = {}  --necessary, because some items can be found more than once (or rather, everything except the actual items)
 for raw_type, types_table in pairs(defines.types) do
     func_apply_recipe = types_table.func
     for recipe, table in pairs(recipes) do
-        if data.raw[raw_type][recipe] --[[and not table.raw_category_name]] then
+        if data.raw[raw_type][recipe] and not processed_items[recipe] then
             func_apply_recipe(data.raw[raw_type], all_recipes[recipe], table, types_table)
-            --table.raw_category_name = raw_type  --needed to speed up processing in the for loop below
             if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
-                all_recipes[recipe].enabled = true
+                all_recipes[recipe].enabled = true  --here will need to assign a technology dependency and the technology itself
             else
                 log('recipe `'..recipe..'` was defined but ingredients were not assigned')
             end
+            processed_items[recipe] = true
         end
     end
 end

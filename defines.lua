@@ -304,7 +304,15 @@ end
 
 function defines.init_balancing_items_table_post_recepies_process(data_raw, settings_startup)
     --energy
-    
+    --I hope that the category in the types table has been initialized and there is a top_items table there
+    local compensation_cat = settings.startup["rfEE_type_of_compensation_category"].value
+    local top_item
+    if defines.types[compensation_cat] then
+        top_item = defines.types[compensation_cat].top_items
+        defines.balancing_items_table.energy.electric = {top_item[1].name, top_item[2]}
+    else
+        log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(defines.types[compensation_cat])..' )! recipes that use items with energy consumption will be disabled!')
+    end
 end
 
 return defines

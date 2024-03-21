@@ -26,7 +26,7 @@ function utils.perfom_math_from_string(x, multiplier)
     end
 end
 
---{item-name=tech-name}
+--{item-name={tech-name, recipe-name}}
 --true means item enabled by default
 local tech_cache = {}
 
@@ -43,12 +43,13 @@ function utils.is_item_has_technology(item_name)
                 if effect.type == "unlock-recipe" then
                     local recipe = all_recipes[effect.recipe]
                     if recipe.result and recipe.result == item_name then
-                        tech_cache[item_name] = tech_name
-                        return tech_name
+                        tech_cache[item_name] = {tech_name, recipe.name}
+                        return tech_cache[item_name]
                     elseif recipe.results then
                         for _, results in pairs(recipe.results) do
                             if results.name == item_name then
-                                return tech_name
+                                tech_cache[item_name] = {tech_name, recipe.name}
+                                return tech_cache[item_name]
                             end
                         end
                     end
@@ -58,22 +59,23 @@ function utils.is_item_has_technology(item_name)
     end
 
     --The game has items that are enabled by default
-    if all_recipes[item_name] and (all_recipes[item_name].enabled or type(all_recipes[item_name].enabled) == "nil") then  --WTF?! Why do some recipes that are enabled first have enabled = true and some do not?!
-        tech_cache[item_name] = true
-        return true
+    --{false, item_name} because there is no technology but there is a recipe
+    if all_recipes[item_name] and (all_recipes[item_name].enabled or type(all_recipes[item_name].enabled) == "nil") then  --WTF?! Why do some recipes that are pre-enabled have enabled = true and some do not?!
+        tech_cache[item_name] = {false, item_name}
+        return tech_cache[item_name]
     else
         --hello wube, i love you...
         --some recipes have a different name than the result,
         --I'm just wondering how the game determines the amount of raw resources in runtime? builds a table of items->recipes where is it?
         for _, recipe in pairs(all_recipes) do
             if recipe.result == item_name and (recipe.enabled or type(recipe.enabled) == "nil") then
-                tech_cache[item_name] = true
-                return true
+                tech_cache[item_name] = {false, item_name}
+                return tech_cache[item_name]
             elseif recipe.results and (recipe.enabled or type(recipe.enabled) == "nil") then
                 for _, results in pairs(recipe.results) do
                     if results.name == item_name then
-                        tech_cache[item_name] = true
-                        return true
+                        tech_cache[item_name] = {false, item_name}
+                        return tech_cache[item_name]
                     end
                 end
             end
