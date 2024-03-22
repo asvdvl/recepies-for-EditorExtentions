@@ -131,12 +131,14 @@ defines.types = {
 
     ["energy-shield-equipment"] = {
         keyword = "base_property",
-        search_rows = {"max_shield_value"}
+        search_rows = {"max_shield_value"},
+        restrict_power_fix = true
     },
 
     ["movement-bonus-equipment"] = {
         keyword = "base_property",
-        search_rows = {"movement_bonus"}
+        search_rows = {"movement_bonus"},
+        --restrict_power_fix = true     --disabled because power consumption too low
     },
 
     --energy related stuff but compatible with base_property(thanks flib)
@@ -146,6 +148,12 @@ defines.types = {
     },
 
     ["generator-equipment"] = {
+        keyword = "base_property",
+        search_rows = {"power"},
+        restrict_power_fix = true
+    },
+
+    ["solar-panel-equipment"] = {
         keyword = "base_property",
         search_rows = {"power"}
     },
@@ -168,7 +176,8 @@ defines.types = {
 
     ["roboport-equipment"] = {
         keyword = "base_property",
-        search_rows = {["construction_radius"] = "^2"}
+        search_rows = {["construction_radius"] = "^2"},
+        restrict_power_fix = true
     },
 
     ["beacon"] = {

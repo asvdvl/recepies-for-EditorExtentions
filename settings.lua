@@ -27,17 +27,25 @@ data:extend({
         order = "c"
     },
     {
-        type = "bool-setting",
-        name = prefixes.mod.."always_overwrite_from_balancing",
-        setting_type = "startup",
-        default_value = false,
-        order = "x"
-    },
-    {
         type = "string-setting",
         name = prefixes.mod.."type_of_compensation_category",
         setting_type = "startup",
         default_value = "generator-equipment",
+        order = "d"
+    },
+    {
+        type = "int-setting",
+        name = prefixes.mod.."divider_time_to_craft_overpower_items",
+        setting_type = "startup",
+        default_value = 1,
+        minimum_value = 1,
+        order = "e"
+    },
+    {
+        type = "bool-setting",
+        name = prefixes.mod.."always_overwrite_from_balancing",
+        setting_type = "startup",
+        default_value = false,
         order = "x"
     },
 })

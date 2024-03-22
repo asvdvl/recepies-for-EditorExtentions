@@ -49,7 +49,9 @@ end
 
 --functions for generating recepies
 ----I decided to make this function as a separate one to make it easier to read
+local top_module_crafting_time = 1
 local function module_top_items_prepairing(data_raw_category, top_items)
+    local recepie_name
     local effect_value = 0
     local current_data
     top_items.data = defines.balancing_items_table.effect   --this will rewrite the defines table but I don’t care, having 2 tables is useless and leads to code bloat
@@ -71,6 +73,10 @@ local function module_top_items_prepairing(data_raw_category, top_items)
 
                 if not current_data[effect_name] or (math.abs(effect_value) > math.abs(current_data[effect_name][2])) then
                     current_data[effect_name] = {module, effect_value}
+                    if utils.is_item_has_technology(module) then
+                        recepie_name = utils.is_item_has_technology(module)[2]
+                        top_module_crafting_time = all_recipes[recepie_name].energy_required
+                    end
                 end
             end
         end
@@ -100,6 +106,7 @@ local function module_processing(data_raw_category, recipe_object, recipes_table
 
     --the part where the actual recipe generation happens
     local ingredients = recipe_object.ingredients
+    recipe_object.energy_required = top_module_crafting_time * 2
     local recipe_item_template = {type="item", name="fish", amount=65000}
 
     --[[
@@ -232,17 +239,20 @@ for _, prototype in pairs(data.raw["assembling-machine"]) do
     end
 end
 
-local entity, amount, power_req = {}, 0, 0
+local entity, amount, power_req, total_power_req, new_item = {}, 0, 0, 0, {}
 local energy_source_fields = {["input_flow_limit"]=true}
-for recipe, table in pairs(recipes) do
+local recipe_item_template = {type="item", name=defines.balancing_items_table.energy.electric[1], amount=0}
+local balancing_item_power_output = defines.balancing_items_table.energy.electric[2]
+for recipe, recipe_def_table in pairs(recipes) do
     --fixing amount of ingridients
     --there are plans to “fix” too expensive items here
     local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
+    total_power_req = 0
     for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
-        --fix "free energy items" here
+        --fix "free energy items", part1, finding how much energy an object needs
         entity = data.raw[utils.find_prototype_category(recipe_row.name)][recipe_row.name]
-        if table.type ~= "defined" then
-            power_req = 0
+        power_req = 0
+        if recipe_def_table.type ~= "defined" then
             if entity.energy_source then
                 for key in pairs(energy_source_fields) do
                     power_req = power_req + (get_energy_value(entity.energy_source[key] or 0) or 0)
@@ -257,8 +267,23 @@ for recipe, table in pairs(recipes) do
         if amount > max_ingrigient_amount then
             --basicly in plans 
             log('item '..all_recipes[recipe].name..' is too powerfull, calc amount of top ingredient '..recipe_row.name..' is '..amount..' but allowed only `'..max_ingrigient_amount)
+            all_recipes[recipe].energy_required = amount / settings.startup["rfEE_divider_time_to_craft_overpower_items"].value
             amount = max_ingrigient_amount
         end
         recipe_row.amount = amount
+        total_power_req = total_power_req + (power_req * amount)
+    end
+    --fix "free energy items", part2, actual fixes
+    if total_power_req > 0 and not defines.types[utils.find_prototype_category(recipe)].restrict_power_fix then
+        log('item '..all_recipes[recipe].name..' power require:'..tostring(total_power_req))
+
+        new_item = table.deepcopy(recipe_item_template)
+        new_item.amount = math.ceil(total_power_req/balancing_item_power_output)
+
+        if new_item.amount > max_ingrigient_amount then
+            new_item.amount = max_ingrigient_amount
+        end
+
+        table.insert(all_recipes[recipe].ingredients, new_item)
     end
 end
