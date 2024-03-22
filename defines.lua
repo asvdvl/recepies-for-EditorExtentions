@@ -190,7 +190,7 @@ defines.types = {
         search_rows = {"maximum_wire_distance", ["supply_area_distance"] = "^2"}
     },
 
-    --items are too complex for processing, i just moved search_rows to 
+    --items are too complex for processing, i just moved search_rows to recipes table
     ['item'] = {
         keyword = "items",
     },
@@ -201,6 +201,7 @@ defines.types = {
     },
 
     ["battery-equipment"] = {
+        keyword = "base_property",
         search_rows = {"energy_source/buffer_capacity"}
     },
 }

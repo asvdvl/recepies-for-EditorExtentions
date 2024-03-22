@@ -152,4 +152,12 @@ function utils.find_prototype_category(item_name)
     end
 end
 
+function utils.split(str, sep)
+    local result = {}
+    for token in string.gmatch(str, "([^" .. sep .. "]+)") do
+        table.insert(result, token)
+    end
+    return result
+end
+
 return utils

@@ -25,14 +25,25 @@ local_defines.energy_fields = {
 local function find_diff_value(search_rows, item)
     local totalSum = 0
     local value = 0
+    local row, subrow, parts
     for row_name, multiplier in pairs(search_rows) do
-        if item[row_name] then
+        if row_name:find("/") then
+            --I'm too lazy to implement a recursive property lookup, so we'll limit ourselves to only level 2
+            parts = utils.split(row_name, "/")
+            subrow = item[parts[1]]
+            if subrow then
+                row = subrow[parts[2]]
+            end
+        else
+            row = item[row_name]
+        end
+        if row then
             value = 0
-            if type(item[row_name]) == "number" then
-                value = item[row_name]
-            elseif type(item[row_name]) == "string" then
-                value = get_energy_value(item[row_name])
-            elseif type(item[row_name]) == "boolean" then
+            if type(row) == "number" then
+                value = row
+            elseif type(row) == "string" then
+                value = get_energy_value(row)
+            elseif type(row) == "boolean" then
                 value = 1
             end
             if type(multiplier) == "number" then
@@ -41,7 +52,7 @@ local function find_diff_value(search_rows, item)
                 totalSum = totalSum + utils.perfom_math_from_string(value, multiplier)
             end
         else
-            log('property `'..row_name..'` is `'..tostring(item[row_name])..'`. prototype `'..item.name..'` (just warning, you can ignore this)')
+            log('property `'..row_name..'` is `'..tostring(row)..'`. prototype `'..item.name..'` (just warning, you can ignore this)')
         end
     end
     return totalSum
@@ -189,10 +200,10 @@ defines.set_function_by_keyword('base_property', base_property_stuff)
 
 --this function falls out of the principle of "code universality" that I adhere to, but I’m tired of putting all these filters in defined.lua
 local function item_processing(data_raw_category, recipe_object, recipes_table, types_table)
-    if string.find(recipes_table.type, defines.item_processing_prefix) then
+    if recipes_table.type:find(defines.item_processing_prefix) then
         local fake_data_raw_category = {}
         for item_name, item_table in pairs(data_raw_category) do
-            if string.find(item_name, recipes_table.name_filter) then
+            if item_name:find(recipes_table.name_filter) then
                 fake_data_raw_category[item_name] = item_table
             end
         end
@@ -218,14 +229,12 @@ local processed_items = {}  --necessary, because some items can be found more th
 for raw_type, types_table in pairs(defines.types) do
     func_apply_recipe = types_table.func
     for recipe, table in pairs(recipes) do
+
         if data.raw[raw_type][recipe] and not processed_items[recipe] then
             func_apply_recipe(data.raw[raw_type], all_recipes[recipe], table, types_table)
-            if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
-                all_recipes[recipe].enabled = true  --here will need to assign a technology dependency and the technology itself
-            else
-                log('recipe `'..recipe..'` was defined but ingredients were not assigned')
+            if #all_recipes[recipe].ingredients > 0 then
+                processed_items[recipe] = true
             end
-            processed_items[recipe] = true
         end
     end
 end
@@ -233,7 +242,7 @@ defines.init_balancing_items_table_post_recepies_process(data.raw, settings.star
 
 --allow assemblers to make new recepies
 for _, prototype in pairs(data.raw["assembling-machine"]) do
-    local _, _, proto_name = string.find(prototype.name, "(.+)-%d+$")
+    local _, _, proto_name = prototype.name:find("(.+)-%d+$")
     if proto_name == "assembling-machine" then
         table.insert(prototype.crafting_categories, "ee-testing-tool")
     end
@@ -285,5 +294,14 @@ for recipe, recipe_def_table in pairs(recipes) do
         end
 
         table.insert(all_recipes[recipe].ingredients, new_item)
+    end
+end
+
+--and finally, adding items to the technology tree
+for recipe, table in pairs(recipes) do
+    if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
+        all_recipes[recipe].enabled = true  --here will need to assign a technology dependency and the technology itself
+    else
+        log('recipe `'..recipe..'` was defined but ingredients were not assigned')
     end
 end
