@@ -1,4 +1,6 @@
 local defines = {}
+local dummy_underground_belt_item = {type="item", name="underground-belt", amount=1}
+local ftable = require("__flib__/table")
 
 defines.item_processing_prefix = "item"
 defines.recipes = {
@@ -14,7 +16,7 @@ defines.recipes = {
             ]]
             {type="item", name="electric-engine-unit", amount=120},
             {type="item", name="processing-unit", amount=60},
-            {type="item", name="express-underground-belt", amount=1},
+            dummy_underground_belt_item,   --update to real one in init_items_table
             {type="item", name="fusion-reactor-equipment", amount=1},
         }},
     ["ee-linked-chest"]={
@@ -202,7 +204,8 @@ defines.types = {
 
     ["battery-equipment"] = {
         keyword = "base_property",
-        search_rows = {"energy_source/buffer_capacity"}
+        search_rows = {"energy_source/buffer_capacity"},
+        restrict_power_fix = true
     },
 }
 
@@ -263,15 +266,15 @@ defines.balancing_items_table = {
         }
     },
     energy = {
-        heat = {
+--[[        heat = {
 
-        },
+        },]]
         electric = {
 
         },
-        battery = {
+--[[        battery = {
 
-        }
+        }]]
     }
 }
 
@@ -294,7 +297,7 @@ for prefix, value in pairs(defines.prefixes) do
 end
 
 --filling out a table for energy where the “best items” are not known in advance
-function defines.init_balancing_items_table(data_raw, settings_startup) --must be called from code with access to data.raw
+function defines.init_items_table(data_raw, settings_startup) --must be called from code with access to data.raw
     --modules
     local effect_table
     for setting_name, value in pairs(settings_startup) do
@@ -310,18 +313,42 @@ function defines.init_balancing_items_table(data_raw, settings_startup) --must b
             end
         end
     end
+
+    --correct underground conveyor for linked conveyor(part of the code from EE)
+    local fastest_speed, fastest_speed_protoname, recipe_rows = 0, "", defines.recipes["ee-linked-belt"].recipe
+    for _, prototype in pairs(data.raw["underground-belt"]) do
+      if prototype.speed > fastest_speed then
+        fastest_speed = prototype.speed
+        fastest_speed_protoname = prototype.name
+      end
+    end
+    local ind = ftable.find(recipe_rows, dummy_underground_belt_item)
+    if ind then
+        recipe_rows[ind].name = fastest_speed_protoname
+    end
 end
 
 function defines.init_balancing_items_table_post_recepies_process(data_raw, settings_startup)
+    local utils = require("utils")
+    local elect_table = defines.balancing_items_table.energy.electric
+    local next_index = 0
+
+    local function my_comp(a, b)
+        return a[2] < b[2]
+    end
+
     --energy
-    --I hope that the category in the types table has been initialized and there is a top_items table there
-    local compensation_cat = settings.startup["rfEE_type_of_compensation_category"].value
-    local top_item
-    if defines.types[compensation_cat] then
-        top_item = defines.types[compensation_cat].top_items
-        defines.balancing_items_table.energy.electric = {top_item[1].name, top_item[2]}
+    local compensation_cat = settings_startup["rfEE_type_of_compensation_category"].value
+    local type_tabl_defines = defines.types[compensation_cat]
+    if type_tabl_defines then
+        for raw_name, raw_table in pairs(data_raw[compensation_cat]) do
+            table.insert(elect_table, {raw_name, utils.find_diff_value(type_tabl_defines.search_rows, raw_table)})
+        end
+        while not utils.is_sorted(elect_table, my_comp) do
+            next_index = ftable.partial_sort(elect_table, next_index, 1, my_comp)
+        end
     else
-        log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(defines.types[compensation_cat])..' )! recipes that use items with energy consumption will be disabled!')
+        log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(type_tabl_defines)..' )!(should not be nil)')
     end
 end
 

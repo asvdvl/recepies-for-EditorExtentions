@@ -3,7 +3,7 @@ local get_energy_value = require("__flib__/data-util").get_energy_value
 --recipes for which I can find legal crafting
 local defines = require("defines")
 local recipes = defines.recipes
-defines.init_balancing_items_table(data.raw, settings.startup)
+defines.init_items_table(data.raw, settings.startup)
 local local_defines = {}
 local utils = require("utils")
 local is_item_NOT_from_EE = utils.is_item_NOT_from_EE
@@ -17,46 +17,6 @@ local_defines.energy_fields = {
     ["energy_per_move"]=true,
     ["max_power"]=true
 }
-
---[[
-    a function that returns the "sum" of properties for a specified entity,
-    to determine how the entity's properties differ from the properties of another entity
-]]
-local function find_diff_value(search_rows, item)
-    local totalSum = 0
-    local value = 0
-    local row, subrow, parts
-    for row_name, multiplier in pairs(search_rows) do
-        if row_name:find("/") then
-            --I'm too lazy to implement a recursive property lookup, so we'll limit ourselves to only level 2
-            parts = utils.split(row_name, "/")
-            subrow = item[parts[1]]
-            if subrow then
-                row = subrow[parts[2]]
-            end
-        else
-            row = item[row_name]
-        end
-        if row then
-            value = 0
-            if type(row) == "number" then
-                value = row
-            elseif type(row) == "string" then
-                value = get_energy_value(row)
-            elseif type(row) == "boolean" then
-                value = 1
-            end
-            if type(multiplier) == "number" then
-                totalSum = totalSum + (value * multiplier)
-            elseif type(multiplier) == "string" then
-                totalSum = totalSum + utils.perfom_math_from_string(value, multiplier)
-            end
-        else
-            log('property `'..row_name..'` is `'..tostring(row)..'`. prototype `'..item.name..'` (just warning, you can ignore this)')
-        end
-    end
-    return totalSum
-end
 
 --functions for generating recepies
 ----I decided to make this function as a separate one to make it easier to read
@@ -86,7 +46,9 @@ local function module_top_items_prepairing(data_raw_category, top_items)
                     current_data[effect_name] = {module, effect_value}
                     if utils.is_item_has_technology(module) then
                         recepie_name = utils.is_item_has_technology(module)[2]
-                        top_module_crafting_time = all_recipes[recepie_name].energy_required
+                        if all_recipes[recepie_name].energy_required > top_module_crafting_time then
+                            top_module_crafting_time = all_recipes[recepie_name].energy_required
+                        end
                     end
                 end
             end
@@ -171,11 +133,11 @@ end
 defines.set_function_by_keyword('modules', module_processing)
 
 local function base_property_stuff(data_raw_category, recipe_object, recipes_table, types_table)
-    local max_value_for_target_item = math.abs(find_diff_value(types_table.search_rows, data_raw_category[recipe_object.name]))
+    local max_value_for_target_item = math.abs(utils.find_diff_value(types_table.search_rows, data_raw_category[recipe_object.name]))
     local maxValue = 0
 
     for _, item in pairs(data_raw_category) do
-        local pairValue = math.abs(find_diff_value(types_table.search_rows, item))
+        local pairValue = math.abs(utils.find_diff_value(types_table.search_rows, item))
         if is_item_NOT_from_EE(item.name)
             and (
                 pairValue < max_value_for_target_item   --checking that the item does not have stats higher than those from the EE mod
@@ -242,16 +204,16 @@ defines.init_balancing_items_table_post_recepies_process(data.raw, settings.star
 
 --allow assemblers to make new recepies
 for _, prototype in pairs(data.raw["assembling-machine"]) do
-    local _, _, proto_name = prototype.name:find("(.+)-%d+$")
-    if proto_name == "assembling-machine" then
+    if prototype.name:find("assembling") then
         table.insert(prototype.crafting_categories, "ee-testing-tool")
     end
 end
 
-local entity, amount, power_req, total_power_req, new_item = {}, 0, 0, 0, {}
+local entity, amount, power_req, total_power_req, new_item, bal_item = {}, 0, 0, 0, {}, {}
 local energy_source_fields = {["input_flow_limit"]=true}
 local recipe_item_template = {type="item", name=defines.balancing_items_table.energy.electric[1], amount=0}
-local balancing_item_power_output = defines.balancing_items_table.energy.electric[2]
+local balancing_items = defines.balancing_items_table.energy.electric
+
 for recipe, recipe_def_table in pairs(recipes) do
     --fixing amount of ingridients
     --there are plans to “fix” too expensive items here
@@ -276,7 +238,7 @@ for recipe, recipe_def_table in pairs(recipes) do
         if amount > max_ingrigient_amount then
             --basicly in plans 
             log('item '..all_recipes[recipe].name..' is too powerfull, calc amount of top ingredient '..recipe_row.name..' is '..amount..' but allowed only `'..max_ingrigient_amount)
-            all_recipes[recipe].energy_required = amount / settings.startup["rfEE_divider_time_to_craft_overpower_items"].value
+            all_recipes[recipe].energy_required = math.ceil(amount / settings.startup["rfEE_divider_time_to_craft_overpower_items"].value)+1
             amount = max_ingrigient_amount
         end
         recipe_row.amount = amount
@@ -285,9 +247,20 @@ for recipe, recipe_def_table in pairs(recipes) do
     --fix "free energy items", part2, actual fixes
     if total_power_req > 0 and not defines.types[utils.find_prototype_category(recipe)].restrict_power_fix then
         log('item '..all_recipes[recipe].name..' power require:'..tostring(total_power_req))
-
         new_item = table.deepcopy(recipe_item_template)
-        new_item.amount = math.ceil(total_power_req/balancing_item_power_output)
+        bal_item = balancing_items[1]
+        if total_power_req > bal_item[2] then
+            for i = 1, #balancing_items do
+                if total_power_req > balancing_items[i][2] then
+                    bal_item = balancing_items[i]
+                else
+                    break
+                end
+            end
+        end
+
+        new_item.name = bal_item[1]
+        new_item.amount = math.ceil(total_power_req/bal_item[2])
 
         if new_item.amount > max_ingrigient_amount then
             new_item.amount = max_ingrigient_amount
@@ -298,7 +271,7 @@ for recipe, recipe_def_table in pairs(recipes) do
 end
 
 --and finally, adding items to the technology tree
-for recipe, table in pairs(recipes) do
+for recipe, recipe_table in pairs(recipes) do
     if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
         all_recipes[recipe].enabled = true  --here will need to assign a technology dependency and the technology itself
     else

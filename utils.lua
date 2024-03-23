@@ -1,5 +1,6 @@
 local utils = {}
 local defines = require("defines")
+local get_energy_value = require("__flib__/data-util").get_energy_value
 local all_technologies = data.raw.technology
 local all_recipes = data.raw.recipe
 local local_defines = {}
@@ -33,7 +34,6 @@ local tech_cache = {}
 --the task is to find the “unlock-recipe” type from the effects of technology, and in it the desired item in the recipe
 function utils.is_item_has_technology(item_name)
     if tech_cache[item_name] then
-        log('tech cache hit! yey!')
         return tech_cache[item_name]    --I don’t know for sure whether it will be needed more than once, I left it just in case
     end
 
@@ -158,6 +158,58 @@ function utils.split(str, sep)
         table.insert(result, token)
     end
     return result
+end
+
+--[[
+    a function that returns the "sum" of properties for a specified entity,
+    to determine how the entity's properties differ from the properties of another entity
+]]
+function utils.find_diff_value(search_rows, item)
+    local totalSum = 0
+    local value = 0
+    local row, subrow, parts
+    for row_name, multiplier in pairs(search_rows) do
+        if row_name:find("/") then
+            --I'm too lazy to implement a recursive property lookup, so we'll limit ourselves to only level 2
+            parts = utils.split(row_name, "/")
+            subrow = item[parts[1]]
+            if subrow then
+                row = subrow[parts[2]]
+            end
+        else
+            row = item[row_name]
+        end
+        if row then
+            value = 0
+            if type(row) == "number" then
+                value = row
+            elseif type(row) == "string" then
+                value = get_energy_value(row) or tostring(row) or 0
+            elseif type(row) == "boolean" then
+                value = 1
+            end
+            if type(multiplier) == "number" then
+                totalSum = totalSum + (value * multiplier)
+            elseif type(multiplier) == "string" then
+                totalSum = totalSum + utils.perfom_math_from_string(value, multiplier)
+            end
+        else
+            log('property `'..row_name..'` is `'..tostring(row)..'`. prototype `'..item.name..'` (just warning, you can ignore this)')
+        end
+    end
+    return totalSum
+end
+
+function utils.is_sorted(array, comp)
+    if #array == 1 then
+        return true
+    end
+    for i = 2, #array do
+        if not comp(array[i-1], array[i]) then
+            return false
+        end
+    end
+    return true
 end
 
 return utils
