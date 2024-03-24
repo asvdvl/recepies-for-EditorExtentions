@@ -355,8 +355,10 @@ function defines.init_balancing_items_table_post_recepies_process(data_raw, sett
     end
 
     if #defines.balancing_items_table.energy.electric > 0 then
-        --adding reactor to linked conveyor
-        table.insert(defines.recipes["ee-linked-belt"].recipe, {type="item", name=defines.balancing_items_table.energy.electric[1][1], amount=1})
+        --adding reactor to linked conveyor and to linked-chest
+        local electric = defines.balancing_items_table.energy.electric
+        table.insert(defines.recipes["ee-linked-belt"].recipe, {type="item", name=electric[1][1], amount=1})
+        table.insert(defines.recipes["ee-linked-chest"].recipe, {type="item", name=electric[#electric-1][1], amount=1})
     end
 end
 
