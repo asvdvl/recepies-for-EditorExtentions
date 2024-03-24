@@ -24,10 +24,10 @@ defines.recipes = {
         --[[
             According to my calculations, using 1 super inserters you can achieve a speed of 360 items per second using these chests!
             therefore, 360/45 = 8, also multiply by 4 sides and get 32 conveyors!
-            But i give off 75% price for motivating build that massive unloaders!
+            But i give off 95% price for motivating build that massive unloaders!
         ]]
         recipe = {
-            {type="item", name="ee-linked-belt", amount=8},
+            {type="item", name="ee-linked-belt", amount=2},
             {type="item", name="steel-chest", amount=1},
         }},
     ["ee-super-inserter"]={},
@@ -201,7 +201,8 @@ defines.types = {
     --other
     ["module"] = {
         keyword = "modules",
-        restrict_power_fix = true   --just in case
+        restrict_power_fix = true,   --just in case
+        fallback_research = "modules"
     },
 
     ["battery-equipment"] = {
@@ -282,7 +283,7 @@ defines.balancing_items_table = {
 
 --definitions for settings
 defines.prefixes = {
-    mod = "rfEE",
+    mod = "rfEE",                   --usually its use is useless and harmful but I left it
     balancing = "_balancing",
     name = "a-item-name",
     value = "effect-value",

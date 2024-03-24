@@ -4,14 +4,14 @@ local prefixes = defines.prefixes
 data:extend({
     {
         type = "bool-setting",
-        name = prefixes.mod.."allow_all_items",
+        name = "rfEE_allow_all_items",
         setting_type = "startup",
         default_value = false,
         order = "a"
     },
     {
         type = "int-setting",
-        name = prefixes.mod.."max_items_count",
+        name = "rfEE_max_items_count",
         setting_type = "startup",
         default_value = 65535,
         minimum_value = 1,
@@ -20,7 +20,7 @@ data:extend({
     },
     {
         type = "int-setting",
-        name = prefixes.mod.."recipes_ingredient_increase_percent",
+        name = "rfEE_recipes_ingredient_increase_percent",
         setting_type = "startup",
         default_value = 120,
         minimum_value = 0,
@@ -28,14 +28,14 @@ data:extend({
     },
     {
         type = "string-setting",
-        name = prefixes.mod.."type_of_compensation_category",
+        name = "rfEE_type_of_compensation_category",
         setting_type = "startup",
         default_value = "generator-equipment",
         order = "d"
     },
     {
         type = "int-setting",
-        name = prefixes.mod.."divider_time_to_craft_overpower_items",
+        name = "rfEE_divider_time_to_craft_overpower_items",
         setting_type = "startup",
         default_value = 1,
         minimum_value = 1,
@@ -43,7 +43,14 @@ data:extend({
     },
     {
         type = "bool-setting",
-        name = prefixes.mod.."always_overwrite_from_balancing",
+        name = "rfEE_ignore_empty_technologies",
+        setting_type = "startup",
+        default_value = false,
+        order = "f"
+    },
+    {
+        type = "bool-setting",
+        name = "rfEE_always_overwrite_from_balancing",
         setting_type = "startup",
         default_value = false,
         order = "x"
