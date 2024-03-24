@@ -6,7 +6,6 @@ local recipes = defines.recipes
 defines.init_items_table(data.raw, settings.startup)
 local local_defines = {}
 local utils = require("utils")
-local is_item_NOT_from_EE = utils.is_item_NOT_from_EE
 
 local_defines.energy_fields = {
     ["energy_usage"]=true,
@@ -138,7 +137,7 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
 
     for _, item in pairs(data_raw_category) do
         local pairValue = math.abs(utils.find_diff_value(types_table.search_rows, item))
-        if is_item_NOT_from_EE(item.name)
+        if utils.is_item_NOT_from_EE(item.name)
             and (
                 pairValue < max_value_for_target_item   --checking that the item does not have stats higher than those from the EE mod
                 and maxValue < pairValue)               --checking that the item has stats greater than those already stored
@@ -148,15 +147,16 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
             types_table.top_items = {item, pairValue}
         end
     end
+    if #types_table.top_items > 0 then
+        local amount = math.ceil(max_value_for_target_item/types_table.top_items[2])
 
-    local amount = math.ceil(max_value_for_target_item/types_table.top_items[2])
-
-    --data.types_table.top_items
-    recipe_object.ingredients = {
-        {type="item",
-        name=types_table.top_items[1].name,
-        amount=amount + amount*((settings.startup["rfEE_recipes_ingredient_increase_percent"].value/100)-1)}
-    }
+        --data.types_table.top_items
+        recipe_object.ingredients = {
+            {type="item",
+            name=types_table.top_items[1].name,
+            amount=amount + amount*((settings.startup["rfEE_recipes_ingredient_increase_percent"].value/100)-1)}
+        }
+    end
 end
 defines.set_function_by_keyword('base_property', base_property_stuff)
 
@@ -170,6 +170,7 @@ local function item_processing(data_raw_category, recipe_object, recipes_table, 
             end
         end
 
+        recipes_table.top_items = {}
         base_property_stuff(fake_data_raw_category, recipe_object, recipes_table, recipes_table)
     end
 end
@@ -202,6 +203,10 @@ for raw_type, types_table in pairs(defines.types) do
 end
 defines.init_balancing_items_table_post_recepies_process(data.raw, settings.startup)
 
+--free not needed variables
+top_module_crafting_time = nil
+processed_items = nil
+
 --allow assemblers to make new recepies
 for _, prototype in pairs(data.raw["assembling-machine"]) do
     if prototype.name:find("assembling") then
@@ -209,7 +214,6 @@ for _, prototype in pairs(data.raw["assembling-machine"]) do
     end
 end
 
-local entity, amount, power_req, total_power_req, new_item, bal_item = {}, 0, 0, 0, {}, {}
 local energy_source_fields = {["input_flow_limit"]=true}
 local recipe_item_template = {type="item", name=defines.balancing_items_table.energy.electric[1], amount=0}
 local balancing_items = defines.balancing_items_table.energy.electric
@@ -218,11 +222,11 @@ for recipe, recipe_def_table in pairs(recipes) do
     --fixing amount of ingridients
     --there are plans to “fix” too expensive items here
     local max_ingrigient_amount = settings.startup["rfEE_max_items_count"].value
-    total_power_req = 0
+    local total_power_req = 0
     for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
         --fix "free energy items", part1, finding how much energy an object needs
-        entity = data.raw[utils.find_prototype_category(recipe_row.name)][recipe_row.name]
-        power_req = 0
+        local entity = data.raw[utils.find_prototype_category(recipe_row.name)][recipe_row.name]
+        local power_req = 0
         if recipe_def_table.type ~= "defined" then
             if entity.energy_source then
                 for key in pairs(energy_source_fields) do
@@ -234,7 +238,7 @@ for recipe, recipe_def_table in pairs(recipes) do
             end
         end
 
-        amount = recipe_row.amount
+        local amount = recipe_row.amount
         if amount > max_ingrigient_amount then
             --basicly in plans 
             log('item '..all_recipes[recipe].name..' is too powerfull, calc amount of top ingredient '..recipe_row.name..' is '..amount..' but allowed only `'..max_ingrigient_amount)
@@ -246,9 +250,9 @@ for recipe, recipe_def_table in pairs(recipes) do
     end
     --fix "free energy items", part2, actual fixes
     if total_power_req > 0 and not defines.types[utils.find_prototype_category(recipe)].restrict_power_fix then
-        log('item '..all_recipes[recipe].name..' power require:'..tostring(total_power_req))
-        new_item = table.deepcopy(recipe_item_template)
-        bal_item = balancing_items[1]
+        --log('item '..all_recipes[recipe].name..' power require:'..tostring(total_power_req))
+        local new_item = table.deepcopy(recipe_item_template)
+        local bal_item = balancing_items[1]
         if total_power_req > bal_item[2] then
             for i = 1, #balancing_items do
                 if total_power_req > balancing_items[i][2] then
@@ -271,9 +275,65 @@ for recipe, recipe_def_table in pairs(recipes) do
 end
 
 --and finally, adding items to the technology tree
-for recipe, recipe_table in pairs(recipes) do
-    if #all_recipes[recipe].ingredients > 0 or settings.startup["rfEE_allow_all_items"].value then
-        all_recipes[recipe].enabled = true  --here will need to assign a technology dependency and the technology itself
+local technology_template = {
+    type = "technology",
+    name = "",
+    --[[icon_size = 1,
+    icon_mipmaps = 4,
+    icon = "__core__/graphics/empty.png",]]
+    effects =
+    {
+      {
+        type = "unlock-recipe",
+        recipe = ""
+      }
+    },
+    prerequisites = {},
+    unit =
+    {
+      count = 50,
+      ingredients = {{"automation-science-pack", 1}},
+      time = 5
+    },
+    order = "a"
+}
+for recipe in pairs(recipes) do
+    local ingredients_req = {}
+    if #all_recipes[recipe].ingredients > 0 then
+        local new_tech = table.deepcopy(technology_template)
+        local fallback_icon = {}
+
+        new_tech.name = new_tech.name..recipe
+        for _, ingr_row in pairs(all_recipes[recipe].ingredients) do
+            local tech_name = utils.is_item_has_technology(ingr_row.name)
+            if tech_name and tech_name[1] then
+                table.insert(new_tech.prerequisites, tech_name[1])
+            end
+            local ingr_proto = utils.find_prototype_category(ingr_row.name)
+            if ingr_proto == utils.find_prototype_category(recipe) and tech_name and tech_name[1] then
+                local tech = data.raw.technology[tech_name[1]]
+                --fallback_icon = tech.icons or {icon = tech.icon, icon_size = tech.icon_size, icon_mipmaps = tech.icon_mipmaps}
+            end
+        end
+        new_tech.effects[1].recipe = recipe
+
+        local item = data.raw.item[recipe] or data.raw[utils.find_prototype_category(recipe)][recipe]
+        if item and (item.icons or item.icon) then
+            new_tech.icons = item.icons or {icon = item.icon, icon_size = item.icon_size, icon_mipmaps = item.icon_mipmaps, tint = item.tint}
+        elseif item and item.sprite and fallback_icon.icon then
+            new_tech.icons = {fallback_icon}
+            new_tech.icons[1].tint = item.sprite.tint
+        elseif item and item.sprite then
+            local sprite = item.sprite
+            new_tech.icon = sprite.filename
+            new_tech.icon_size = utils.get_right_table_by_value(sprite.height - sprite.width, sprite.width, sprite.height)
+            new_tech.icon_mipmaps = 1
+            new_tech.tint = sprite.tint
+        end
+
+        data:extend({new_tech})
+    elseif settings.startup["rfEE_allow_all_items"].value then
+        all_recipes[recipe].enabled = true
     else
         log('recipe `'..recipe..'` was defined but ingredients were not assigned')
     end

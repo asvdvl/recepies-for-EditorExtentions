@@ -16,8 +16,8 @@ defines.recipes = {
             ]]
             {type="item", name="electric-engine-unit", amount=120},
             {type="item", name="processing-unit", amount=60},
-            dummy_underground_belt_item,   --update to real one in init_items_table
-            {type="item", name="fusion-reactor-equipment", amount=1},
+            dummy_underground_belt_item,                                    --update to real one in init_items_table
+            --{type="item", name="fusion-reactor-equipment", amount=1},     --should be added to init_balancing_items_table_post_recepies_process
         }},
     ["ee-linked-chest"]={
         type = "defined",
@@ -102,7 +102,8 @@ defines.types = {
     },
 
     ["night-vision-equipment"] = {
-        keyword = "defined"
+        keyword = "defined",
+        restrict_power_fix = true
     },
 
     --base_property
@@ -200,6 +201,7 @@ defines.types = {
     --other
     ["module"] = {
         keyword = "modules",
+        restrict_power_fix = true   --just in case
     },
 
     ["battery-equipment"] = {
@@ -349,6 +351,11 @@ function defines.init_balancing_items_table_post_recepies_process(data_raw, sett
         end
     else
         log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(type_tabl_defines)..' )!(should not be nil)')
+    end
+
+    if #defines.balancing_items_table.energy.electric > 0 then
+        --adding reactor to linked conveyor
+        table.insert(defines.recipes["ee-linked-belt"].recipe, {type="item", name=defines.balancing_items_table.energy.electric[1][1], amount=1})
     end
 end
 

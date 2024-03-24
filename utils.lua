@@ -47,11 +47,12 @@ function utils.is_item_has_technology(proto_name)
             for _, effect in pairs(tech.effects) do
                 if effect.type == "unlock-recipe" then
                     local recipe = all_recipes[effect.recipe]
-                    if recipe.result and recipe.result == proto_name then
+                    local results = recipe.results or (recipe.normal and recipe.normal.results) or (recipe.expensive and recipe.expensive.results)
+                    if (recipe.result or (recipe.normal and recipe.normal.result) or (recipe.expensive and recipe.expensive.result)) == proto_name then
                         tech_cache[proto_name] = {tech_name, recipe.name}
                         return tech_cache[proto_name]
-                    elseif recipe.results then
-                        for _, results in pairs(recipe.results) do
+                    elseif results then
+                        for _, results in pairs(results) do
                             if results.name == proto_name then
                                 tech_cache[proto_name] = {tech_name, recipe.name}
                                 return tech_cache[proto_name]
@@ -92,8 +93,8 @@ end
 
 --- small function to select from 2 tables
 --- @param value integer
---- @param pos_data table
---- @param neg_data table
+--- @param pos_data any
+--- @param neg_data any
 --- @return table|nil
 function utils.get_right_table_by_value(value, pos_data, neg_data)
     if value >= 0 then
