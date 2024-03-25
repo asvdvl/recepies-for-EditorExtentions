@@ -50,6 +50,13 @@ data:extend({
     },
     {
         type = "bool-setting",
+        name = "rfEE_debug",
+        setting_type = "startup",
+        default_value = false,
+        order = "f"
+    },
+    {
+        type = "bool-setting",
         name = "rfEE_always_overwrite_from_balancing",
         setting_type = "startup",
         default_value = false,

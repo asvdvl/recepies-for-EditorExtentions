@@ -337,7 +337,7 @@ function defines.init_balancing_items_table_post_recepies_process(data_raw, sett
     local next_index = 0
 
     local function my_comp(a, b)
-        return a[2] < b[2]
+        return a[2] <= b[2]
     end
 
     --energy
@@ -345,10 +345,17 @@ function defines.init_balancing_items_table_post_recepies_process(data_raw, sett
     local type_tabl_defines = defines.types[compensation_cat]
     if type_tabl_defines then
         for raw_name, raw_table in pairs(data_raw[compensation_cat]) do
-            table.insert(elect_table, {raw_name, utils.find_diff_value(type_tabl_defines.search_rows, raw_table)})
+            local item_tech = utils.is_item_has_technology(raw_name)
+            if item_tech and item_tech[1] and item_tech[2] then
+                local raw_tech = data.raw.technology[item_tech[1]]
+                local raw_recipe = data.raw.recipe[item_tech[2]]
+                if utils.is_techORrecipe_enabled(raw_tech) and utils.is_techORrecipe_enabled(raw_recipe) then
+                    table.insert(elect_table, {raw_name, utils.find_diff_value(type_tabl_defines.search_rows, raw_table)})
+                end
+            end
         end
         while not utils.is_sorted(elect_table, my_comp) do
-            next_index = ftable.partial_sort(elect_table, next_index, 1, my_comp)
+            next_index = ftable.partial_sort(elect_table, next_index, #elect_table, my_comp)
         end
     else
         log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(type_tabl_defines)..' )!(should not be nil)')

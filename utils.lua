@@ -236,4 +236,30 @@ function utils.is_sorted(array, comp)
     return true
 end
 
+local is_debug = false or settings.startup["rfEE_debug"].value
+function utils.log(...)
+	if is_debug then
+        log(...)
+    end
+end
+
+function utils.is_techORrecipe_enabled(tech_or_recipe)
+    assert(type(tech_or_recipe)=="table", "wrong type! must be table")
+    if tech_or_recipe.type == "technology" then
+        local f1 = type(tech_or_recipe.enabled) == "nil" or (type(tech_or_recipe.enabled) == "boolean" and tech_or_recipe.enabled)
+        local f2 = not tech_or_recipe.hidden == true
+        return f1 and f2
+    elseif tech_or_recipe.type == "recipe" then
+        local recipe = tech_or_recipe
+        local f1 = type(recipe.enabled) == "nil" or (type(recipe.enabled) == "boolean" and recipe.enabled)
+        local ingredients = recipe.ingredients or (recipe.normal and recipe.normal.ingredients) or (recipe.expensive and recipe.expensive.ingredients)
+        local results = recipe.results or (recipe.normal and recipe.normal.results) or (recipe.expensive and recipe.expensive.results) or (recipe.result and {recipe.result})
+        if not f1 and utils.is_item_has_technology(results[1]) then
+            f1 = utils.is_item_has_technology(results[1])[1] ~= false      --i just hope that recipe.name == recipe.result because i want to release this mod
+        end
+        local f2 = #(ingredients) > 0
+        return f1 and f2
+    end
+end
+
 return utils

@@ -70,6 +70,7 @@ local function is_solution_are_found(current_effects, top_items_data)
 end
 
 local function module_processing(data_raw_category, recipe_object, recipes_table, types_table)
+    utils.log("module_processing work on "..recipe_object.name)
     --the part where the table of top items is created
     local effect_value, effect_value_2 = 0, 0
 
@@ -134,10 +135,12 @@ end
 defines.set_function_by_keyword('modules', module_processing)
 
 local function base_property_stuff(data_raw_category, recipe_object, recipes_table, types_table)
+    utils.log("base_property_stuff work on "..recipe_object.name)
     local max_value_for_target_item = math.abs(utils.find_diff_value(types_table.search_rows, data_raw_category[recipe_object.name]))
     local maxValue = 0
 
     for _, item in pairs(data_raw_category) do
+        utils.log("comparing to "..item.name)
         local pairValue = math.abs(utils.find_diff_value(types_table.search_rows, item))
         if utils.is_item_NOT_from_EE(item.name)
             and (
@@ -145,6 +148,7 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
                 and maxValue < pairValue)               --checking that the item has stats greater than those already stored
             and utils.is_item_has_technology(item.name)
         then
+            utils.log("better than previous "..tostring(maxValue)..' < '..tostring(pairValue))
             maxValue = pairValue
             types_table.top_items = {item, pairValue}
         end
@@ -164,6 +168,7 @@ defines.set_function_by_keyword('base_property', base_property_stuff)
 
 --this function falls out of the principle of "code universality" that I adhere to, but I’m tired of putting all these filters in defined.lua
 local function item_processing(data_raw_category, recipe_object, recipes_table, types_table)
+    utils.log("item_processing work on "..recipe_object.name)
     if recipes_table.type:find(defines.item_processing_prefix) then
         local fake_data_raw_category = {}
         for item_name, item_table in pairs(data_raw_category) do
@@ -179,6 +184,7 @@ end
 defines.set_function_by_keyword('items', item_processing)
 
 local function defined_stuff(data_raw_category, recipe_object, recipes_table, types_table)
+    utils.log("defined_stuff work on "..recipe_object.name)
     if recipes_table.type == "defined" then
         recipe_object.ingredients = recipes_table.recipe
     else
@@ -189,26 +195,32 @@ local function defined_stuff(data_raw_category, recipe_object, recipes_table, ty
 end
 defines.set_function_by_keyword('defined', defined_stuff)
 
+log('main cycle for apply/calc all recepies')
 --main cycle for apply/calc all recepies
-local processed_items = {}  --necessary, because some items can be found more than once (or rather, everything except the actual items)
-for raw_type, types_table in pairs(defines.types) do
+for recipe, table in pairs(recipes) do
+    local raw_type = utils.find_prototype_category(recipe)
+    local types_table = defines.types[raw_type]
     func_apply_recipe = types_table.func
-    for recipe, table in pairs(recipes) do
-
-        if data.raw[raw_type][recipe] and not processed_items[recipe] then
-            func_apply_recipe(data.raw[raw_type], all_recipes[recipe], table, types_table)
-            if #all_recipes[recipe].ingredients > 0 then
-                processed_items[recipe] = true
-            end
+    if data.raw[raw_type][recipe] then
+        utils.log('recipe '..recipe)
+        local success, reason = pcall(func_apply_recipe, data.raw[raw_type], all_recipes[recipe], table, types_table)
+        if not success then
+            log("error while processing recipe `"..recipe.."`: "..reason)
+        end
+        if #all_recipes[recipe].ingredients > 0 then
+            all_recipes[recipe].enabled = nil
         end
     end
 end
+
+log('init_balancing_items_table_post_recepies_process')
 defines.init_balancing_items_table_post_recepies_process(data.raw, start_settings)
 
 --free not needed variables
 top_module_crafting_time = nil
 processed_items = nil
 
+log('allowing assemblers to make new recepies')
 --allow assemblers to make new recepies
 for _, prototype in pairs(data.raw["assembling-machine"]) do
     if prototype.name:find("assembling") then
@@ -220,6 +232,7 @@ local energy_source_fields = {["input_flow_limit"]=true}
 local recipe_item_template = {type="item", name=defines.balancing_items_table.energy.electric[1], amount=0}
 local balancing_items = defines.balancing_items_table.energy.electric
 
+log('fixing amount of ingridients and fix "free energy items"')
 for recipe, recipe_def_table in pairs(recipes) do
     --fixing amount of ingridients
     --there are plans to “fix” too expensive items here
@@ -252,7 +265,7 @@ for recipe, recipe_def_table in pairs(recipes) do
     end
     --fix "free energy items", part2, actual fixes
     if total_power_req > 0 and not defines.types[utils.find_prototype_category(recipe)].restrict_power_fix then
-        --log('item '..all_recipes[recipe].name..' power require:'..tostring(total_power_req))
+        utils.log('item '..all_recipes[recipe].name..' power require:'..tostring(total_power_req))
         local new_item = table.deepcopy(recipe_item_template)
         local bal_item = balancing_items[1]
         if total_power_req > bal_item[2] then
@@ -276,32 +289,47 @@ for recipe, recipe_def_table in pairs(recipes) do
     end
 end
 
+log('adding items to the technology tree')
 --and finally, adding items to the technology tree
 for recipe in pairs(recipes) do
     local ingredients_req = {}
     local total_count = 10
     local total_time = 10
-    if #all_recipes[recipe].ingredients > 0 then
-        local new_tech = {
-            type = "technology",
-            name = "rfEE_",
-            effects =
-            {
-              {
-                type = "unlock-recipe",
-                recipe = ""
-              }
-            },
-            prerequisites = {},
-            unit =
-            {
-              count = total_count,
-              ingredients = ingredients_req, --["automation-science-pack"] = {"automation-science-pack", 1}},  --This is what the final table looks like, using a dictionary simplifies searching through the array
-              time = total_time
-            },
-            order = "z"
-        }
 
+    local new_tech = {
+        type = "technology",
+        name = "rfEE_",
+        enabled = false,
+        hidden = true,
+        effects =
+        {
+          {
+            type = "unlock-recipe",
+            recipe = ""
+          }
+        },
+        prerequisites = {},
+        unit =
+        {
+          count = total_count,
+          ingredients = ingredients_req, --["automation-science-pack"] = {"automation-science-pack", 1}},  --This is what the final table looks like, using a dictionary simplifies searching through the array
+          time = total_time
+        },
+        order = "z"
+    }
+
+    local item = data.raw.item[recipe] or data.raw[utils.find_prototype_category(recipe)][recipe]
+    if item and (item.icons or item.icon) then
+        new_tech.icons = item.icons or {icon = item.icon, icon_size = item.icon_size, icon_mipmaps = item.icon_mipmaps, tint = item.tint}
+    elseif item and item.sprite then
+        local sprite = item.sprite
+        new_tech.icon = sprite.filename
+        new_tech.icon_size = utils.get_right_table_by_value(sprite.height - sprite.width, sprite.width, sprite.height)
+        new_tech.icon_mipmaps = 1
+        new_tech.tint = sprite.tint
+    end
+
+    if utils.is_techORrecipe_enabled(all_recipes[recipe]) then
         new_tech.name = new_tech.name..recipe
         local item_left = #all_recipes[recipe].ingredients
         for _, ingr_row in pairs(all_recipes[recipe].ingredients) do
@@ -334,18 +362,9 @@ for recipe in pairs(recipes) do
         new_tech.unit.count = total_count  + total_count*percent
         new_tech.unit.time = total_time  + total_time*percent
 
-        local item = data.raw.item[recipe] or data.raw[utils.find_prototype_category(recipe)][recipe]
-        if item and (item.icons or item.icon) then
-            new_tech.icons = item.icons or {icon = item.icon, icon_size = item.icon_size, icon_mipmaps = item.icon_mipmaps, tint = item.tint}
-        elseif item and item.sprite then
-            local sprite = item.sprite
-            new_tech.icon = sprite.filename
-            new_tech.icon_size = utils.get_right_table_by_value(sprite.height - sprite.width, sprite.width, sprite.height)
-            new_tech.icon_mipmaps = 1
-            new_tech.tint = sprite.tint
-        end
         if not stdtable.is_empty(new_tech.unit.ingredients) or start_settings["rfEE_ignore_empty_technologies"].value then
-            data:extend({new_tech})
+            new_tech.enabled = true
+            new_tech.hidden = false
         else
             log('recipe `'..recipe..'` was defined(and ingredients was assigned) but no ingridients for technology')
         end
@@ -354,4 +373,5 @@ for recipe in pairs(recipes) do
     else
         log('recipe `'..recipe..'` was defined but ingredients were not assigned')
     end
+    data:extend({new_tech})
 end
