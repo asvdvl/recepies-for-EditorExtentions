@@ -328,9 +328,10 @@ for recipe in pairs(recipes) do
         new_tech.icon_mipmaps = 1
         new_tech.tint = sprite.tint
     end
+    new_tech.name = new_tech.name..recipe
+    new_tech.effects[1].recipe = recipe
 
     if utils.is_techORrecipe_enabled(all_recipes[recipe]) then
-        new_tech.name = new_tech.name..recipe
         local item_left = #all_recipes[recipe].ingredients
         for _, ingr_row in pairs(all_recipes[recipe].ingredients) do
             item_left = item_left - 1
@@ -357,7 +358,6 @@ for recipe in pairs(recipes) do
                 end
             end
         end
-        new_tech.effects[1].recipe = recipe
         local percent = (start_settings["rfEE_recipes_ingredient_increase_percent"].value/100)-1
         new_tech.unit.count = total_count  + total_count*percent
         new_tech.unit.time = total_time  + total_time*percent
