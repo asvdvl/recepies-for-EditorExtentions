@@ -15,6 +15,7 @@ local function message_handler()
     end
     if #message > 0 then
         game.print({"", {"message.startup-message-base"}, message, {"message.startup-message-end"}})
+        log({"", {"message.startup-message-base"}, message, {"message.startup-message-end"}})
     end
     global.message_was_shown = true
 end
