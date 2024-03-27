@@ -97,7 +97,7 @@ end
 --- @param value integer
 --- @param pos_data any
 --- @param neg_data any
---- @return table|nil
+--- @return any
 function utils.get_right_table_by_value(value, pos_data, neg_data)
     if value >= 0 then
         return pos_data

@@ -23,6 +23,7 @@ local_defines.energy_fields = {
 ----I decided to make this function as a separate one to make it easier to read
 local top_module_crafting_time = 1
 local function module_top_items_prepairing(data_raw_category, top_items)
+    utils.log("module_top_items_prepairing")
     local recepie_name
     local effect_value = 0
     local current_data
@@ -37,19 +38,17 @@ local function module_top_items_prepairing(data_raw_category, top_items)
         if not defines.recipes[module] then
             for effect_name, v in pairs(module_props.effect) do
                 effect_value = v.bonus
+                utils.log("module "..module..' effect_value: '..effect_value)
                 current_data = utils.get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
 
-                if not current_data then    --current_data has missing effects, but fallback items shouldn't have them
-                    break
-                end
+                local item_tech = utils.is_item_has_technology(module)
+                if (math.abs(effect_value) > math.abs(current_data[effect_name][2])) and item_tech and item_tech[1] and item_tech[2] then
+                    utils.log("module "..module..' effect_value: '..tostring(math.abs(effect_value))..' is > '..tostring(math.abs(current_data[effect_name][2])))
 
-                if not current_data[effect_name] or (math.abs(effect_value) > math.abs(current_data[effect_name][2])) then
                     current_data[effect_name] = {module, effect_value}
-                    if utils.is_item_has_technology(module) then
-                        recepie_name = utils.is_item_has_technology(module)[2]
-                        if all_recipes[recepie_name].energy_required > top_module_crafting_time then
-                            top_module_crafting_time = all_recipes[recepie_name].energy_required
-                        end
+                    recepie_name = item_tech[2]
+                    if all_recipes[recepie_name].energy_required > top_module_crafting_time then
+                        top_module_crafting_time = all_recipes[recepie_name].energy_required
                     end
                 end
             end
