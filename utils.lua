@@ -47,15 +47,17 @@ function utils.is_item_has_technology(proto_name)
             for _, effect in pairs(tech.effects) do
                 if effect.type == "unlock-recipe" then
                     local recipe = all_recipes[effect.recipe]
-                    local results = recipe.results or (recipe.normal and recipe.normal.results) or (recipe.expensive and recipe.expensive.results)
-                    if (recipe.result or (recipe.normal and recipe.normal.result) or (recipe.expensive and recipe.expensive.result)) == proto_name then
-                        tech_cache[proto_name] = {tech_name, recipe.name}
-                        return tech_cache[proto_name]
-                    elseif results then
-                        for _, results in pairs(results) do
-                            if results.name == proto_name then
-                                tech_cache[proto_name] = {tech_name, recipe.name}
-                                return tech_cache[proto_name]
+                    if recipe then
+                        local results = recipe.results or (recipe.normal and recipe.normal.results) or (recipe.expensive and recipe.expensive.results)
+                        if (recipe.result or (recipe.normal and recipe.normal.result) or (recipe.expensive and recipe.expensive.result)) == proto_name then
+                            tech_cache[proto_name] = {tech_name, recipe.name}
+                            return tech_cache[proto_name]
+                        elseif results then
+                            for _, results in pairs(results) do
+                                if results.name == proto_name then
+                                    tech_cache[proto_name] = {tech_name, recipe.name}
+                                    return tech_cache[proto_name]
+                                end
                             end
                         end
                     end
@@ -165,7 +167,7 @@ function utils.find_prototype_category(item_name)
     end
 end
 
---- функция для разделения троки вида "table/subtable" -> {"table", "subtable"}
+--- function for splitting strings of the form "table/subtable" -> {"table", "subtable"}
 --- @param str string input string
 --- @param sep string separator
 --- @return table 
@@ -236,7 +238,11 @@ function utils.is_sorted(array, comp)
     return true
 end
 
-local is_debug = false or settings.startup["rfEE_debug"].value
+local is_debug = settings.startup["rfEE_debug"].value
+if type(__DebugAdapter) == "table" then
+    is_debug = true
+    log('detect debug adapter, logs enabled')
+end
 function utils.log(...)
 	if is_debug then
         log(...)
