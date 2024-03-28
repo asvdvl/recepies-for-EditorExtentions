@@ -4,7 +4,12 @@
     "author": "asvdev(in game - Dial-up)",
     "factorio_version": "1.1",
     "version": "1.0.0",
-    "dependencies": ["base >= 0.18.0", "flib >= 0.3.2", "stdlib >= 1.0.0"],
+    "dependencies": ["base >= 0.18.0", "flib >= 0.3.2", "stdlib >= 1.0.0", "EditorExtensions"],
     "description": "adds 'legal' recipes for items from the Editor Extensions mod",
-    "homepage": "https://github.com/asvdvl/recepies-for-EditorExtentions"
+    "homepage": "https://github.com/asvdvl/recepies-for-EditorExtentions",
+    "package":{
+        "ignore":[
+            "*.kra"
+        ]
+    }
 }
