@@ -1,7 +1,9 @@
 
 # Auto-generated recipes for the Editor Extensions mod
 
-Goals (and limitations for me):
+> may be unstable at the moment, I will be grateful if you report errors to me
+
+## Goals (and limitations for me):
 - dynamically, without using “hardcoding”:
 > It didn’t work out completely, the mod has 3 of 27 recipes with a hardcode: a linked conveyor belt with a chest (partially) and night vision goggles (entirely)
   - generating recipes for items based on their "properties"
@@ -18,13 +20,13 @@ Goals (and limitations for me):
 
 - integration into assemblers
 
-But...why? Why not just write the recipes by hand?
+## But...why? Why not just write the recipes by hand?
  1. this is a challenge I set for myself
  2. I don’t have to add compatibility with every mod, what I wrote should be able to independently find everything they need to create recipes
  3. learn about the "fun" features of modding and gaming
  4. it was fun to program
 
-Tested with mods, and at least the game starts:
+## Tested with mods, and at least the game starts:
 - more-module-tiers
 - RampantArsenal
 - UltimateBelts
@@ -37,8 +39,15 @@ Tested with mods, and at least the game starts:
 - Space Exploration
   - It didn’t start right away, but the fix turned out to be funny, I just renamed data-update to data-final-fixes, also all modules except speed are disabled due to exceeding characteristics, you can fix it manually in the settings by specifying the necessary modules and enabling the forced use of the specified items. although if this mod is needed not only by me, then I will fix it.
 
+## gallery
 <details>
-<summary>Enabled items:</summary>
+<summary>list</summary>
+
+</details>
+
+## Enabled items:
+<details>
+<summary>list</summary>
 
  - Linked belt
  - Linked chest
