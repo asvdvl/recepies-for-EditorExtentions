@@ -239,13 +239,27 @@ function utils.is_sorted(array, comp)
 end
 
 local is_debug = settings.startup["rfEE_debug"].value
+utils.log_lev = {
+    v = 0,
+    add = function (self, v)
+        self.v = self.v + (v or 1)
+    end,
+    rem = function (self, v)
+        self.v = self.v - (v or 1)
+    end,
+    set = function (self, v)
+        self.v = v
+    end,
+}
 if type(__DebugAdapter) == "table" then
     is_debug = true
     log('detect debug adapter, logs enabled')
 end
-function utils.log(...)
+--- custom logging
+--- @param message string|nil
+function utils.log(message)
 	if is_debug then
-        log(...)
+        log(string.rep('|-', utils.log_lev.v)..message)
     end
 end
 

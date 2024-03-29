@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------------------------
 Version: 1.0.0
-Date: 2024-03-27
+Date: 2024-03-30
   Major Features:
     - dynamic recipe generation for modules using "combinatorial optimization"
     - dynamic generation of recipes for other items

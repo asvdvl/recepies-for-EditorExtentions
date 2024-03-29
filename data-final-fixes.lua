@@ -1,28 +1,22 @@
 local all_recipes = data.raw.recipe
-local get_energy_value = require("__flib__/data-util").get_energy_value
-local stdtable = require('__stdlib__/stdlib/utils/table')
+local start_settings = settings.startup
+
 --recipes for which I can find legal crafting
 local defines = require("defines")
-local recipes = defines.recipes
-local start_settings = settings.startup
-defines.init_items_table(data.raw, start_settings)
-local local_defines = {}
+local get_energy_value = require("__flib__/data-util").get_energy_value
+local stdtable = require('__stdlib__/stdlib/utils/table')
 local utils = require("utils")
 
-local_defines.energy_fields = {
-    ["energy_usage"]=true,
-    ["energy_per_movement"]=true,
-    ["energy_per_rotation"]=true,
-    ["power"]=true,
-    ["energy_consumption"]=true,
-    ["energy_per_move"]=true,
-    ["max_power"]=true
-}
+local recipes = defines.recipes
+local lev = utils.log_lev
+
+defines.init_items_table(data.raw, start_settings)
 
 --functions for generating recepies
 ----I decided to make this function as a separate one to make it easier to read
 local top_module_crafting_time = 1
 local function module_top_items_prepairing(data_raw_category, top_items)
+    lev:add()
     utils.log("module_top_items_prepairing")
     local recepie_name
     local effect_value = 0
@@ -31,29 +25,40 @@ local function module_top_items_prepairing(data_raw_category, top_items)
     local top_items_data = top_items.data
 
     if start_settings["rfEE_always_overwrite_from_balancing"].value then
+        lev:rem()
         return
     end
 
     for module, module_props in pairs(data_raw_category) do
+        lev:add()
+        utils.log("module "..module)
         if not defines.recipes[module] then
             for effect_name, v in pairs(module_props.effect) do
+                lev:add()
+
                 effect_value = v.bonus
-                utils.log("module "..module..' effect_value: '..effect_value)
+                utils.log('effect_value: '..effect_value)
                 current_data = utils.get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
 
                 local item_tech = utils.is_item_has_technology(module)
                 if (math.abs(effect_value) > math.abs(current_data[effect_name][2])) and item_tech and item_tech[1] and item_tech[2] then
-                    utils.log("module "..module..' effect_value: '..tostring(math.abs(effect_value))..' is > '..tostring(math.abs(current_data[effect_name][2])))
+                    utils.log('effect_value: is > '..tostring(math.abs(current_data[effect_name][2])))
 
                     current_data[effect_name] = {module, effect_value}
                     recepie_name = item_tech[2]
                     if all_recipes[recepie_name].energy_required > top_module_crafting_time then
+                        lev:add()
                         top_module_crafting_time = all_recipes[recepie_name].energy_required
+                        utils.log('new module craft time '..tostring(top_module_crafting_time))
+                        lev:rem()
                     end
                 end
+                lev:rem()
             end
         end
+        lev:rem()
     end
+    lev:rem()
 end
 
 --checking that the solution satisfies the condition(for modules)
@@ -69,6 +74,7 @@ local function is_solution_are_found(current_effects, top_items_data)
 end
 
 local function module_processing(data_raw_category, recipe_object, recipes_table, types_table)
+    lev:add()
     utils.log("module_processing work on "..recipe_object.name)
     --the part where the table of top items is created
     local effect_value, effect_value_2 = 0, 0
@@ -130,15 +136,18 @@ local function module_processing(data_raw_category, recipe_object, recipes_table
         new_item.amount = amount
         table.insert(ingredients, new_item)
     end
+    lev:rem()
 end
 defines.set_function_by_keyword('modules', module_processing)
 
 local function base_property_stuff(data_raw_category, recipe_object, recipes_table, types_table)
+    lev:add()
     utils.log("base_property_stuff work on "..recipe_object.name)
     local max_value_for_target_item = math.abs(utils.find_diff_value(types_table.search_rows, data_raw_category[recipe_object.name]))
     local maxValue = 0
 
     for _, item in pairs(data_raw_category) do
+        lev:add()
         utils.log("comparing to "..item.name)
         local pairValue = math.abs(utils.find_diff_value(types_table.search_rows, item))
         if utils.is_item_NOT_from_EE(item.name)
@@ -151,6 +160,7 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
             maxValue = pairValue
             types_table.top_items = {item, pairValue}
         end
+        lev:rem()
     end
     if #types_table.top_items > 0 then
         local amount = math.ceil(max_value_for_target_item/types_table.top_items[2])
@@ -162,12 +172,15 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
             amount=amount + amount*((start_settings["rfEE_recipes_ingredient_increase_percent"].value/100)-1)}
         }
     end
+    lev:rem()
 end
 defines.set_function_by_keyword('base_property', base_property_stuff)
 
 --this function falls out of the principle of "code universality" that I adhere to, but I’m tired of putting all these filters in defined.lua
 local function item_processing(data_raw_category, recipe_object, recipes_table, types_table)
+    lev:add()
     utils.log("item_processing work on "..recipe_object.name)
+
     if recipes_table.type:find(defines.item_processing_prefix) then
         local fake_data_raw_category = {}
         for item_name, item_table in pairs(data_raw_category) do
@@ -179,11 +192,14 @@ local function item_processing(data_raw_category, recipe_object, recipes_table, 
         recipes_table.top_items = {}
         base_property_stuff(fake_data_raw_category, recipe_object, recipes_table, recipes_table)
     end
+    lev:rem()
 end
 defines.set_function_by_keyword('items', item_processing)
 
 local function defined_stuff(data_raw_category, recipe_object, recipes_table, types_table)
+    lev:add()
     utils.log("defined_stuff work on "..recipe_object.name)
+
     if recipes_table.type == "defined" then
         recipe_object.ingredients = recipes_table.recipe
     else
@@ -191,11 +207,13 @@ local function defined_stuff(data_raw_category, recipe_object, recipes_table, ty
         log('recipe category mark as defined but recipe mark as '..recipes_table.type..'! '..recipe_object.name)
         log('-----------------------------------------------------------')
     end
+    lev:rem()
 end
 defines.set_function_by_keyword('defined', defined_stuff)
 
 log('main cycle for apply/calc all recepies')
 --main cycle for apply/calc all recepies
+lev:add()
 for recipe, table in pairs(recipes) do
     local raw_type = utils.find_prototype_category(recipe)
     local types_table = defines.types[raw_type]
@@ -211,6 +229,7 @@ for recipe, table in pairs(recipes) do
         end
     end
 end
+lev:rem()
 
 log('init_balancing_items_table_post_recepies_process')
 defines.init_balancing_items_table_post_recepies_process(data.raw, start_settings)
@@ -230,8 +249,18 @@ end
 local energy_source_fields = {["input_flow_limit"]=true}
 local recipe_item_template = {type="item", name=defines.balancing_items_table.energy.electric[1], amount=0}
 local balancing_items = defines.balancing_items_table.energy.electric
+local energy_fields = {
+    ["energy_usage"]=true,
+    ["energy_per_movement"]=true,
+    ["energy_per_rotation"]=true,
+    ["power"]=true,
+    ["energy_consumption"]=true,
+    ["energy_per_move"]=true,
+    ["max_power"]=true
+}
 
 log('fixing amount of ingridients and fix "free energy items"')
+lev:add()
 for recipe, recipe_def_table in pairs(recipes) do
     --fixing amount of ingridients
     --there are plans to “fix” too expensive items here
@@ -247,7 +276,7 @@ for recipe, recipe_def_table in pairs(recipes) do
                     power_req = power_req + (get_energy_value(entity.energy_source[key] or 0) or 0)
                 end
             end
-            for key in pairs(local_defines.energy_fields) do
+            for key in pairs(energy_fields) do
                 power_req = power_req + (get_energy_value(entity[key] or 0) or 0)
             end
         end
@@ -287,10 +316,13 @@ for recipe, recipe_def_table in pairs(recipes) do
         table.insert(all_recipes[recipe].ingredients, new_item)
     end
 end
+lev:rem()
 
 log('adding items to the technology tree')
 --and finally, adding items to the technology tree
+lev:add()
 for recipe in pairs(recipes) do
+    utils.log('apply tech for '..recipe)
     local ingredients_req = {}
     local total_count = 10
     local total_time = 10
@@ -364,6 +396,7 @@ for recipe in pairs(recipes) do
         if not stdtable.is_empty(new_tech.unit.ingredients) or start_settings["rfEE_ignore_empty_technologies"].value then
             new_tech.enabled = true
             new_tech.hidden = false
+            utils.log(recipe..' enabled. req: '..serpent.block(ingredients_req))
         else
             log('recipe `'..recipe..'` was defined(and ingredients was assigned) but no ingridients for technology')
         end
@@ -374,3 +407,4 @@ for recipe in pairs(recipes) do
     end
     data:extend({new_tech})
 end
+lev:rem()
