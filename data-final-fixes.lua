@@ -225,7 +225,7 @@ for recipe, table in pairs(recipes) do
             log("error while processing recipe `"..recipe.."`: "..reason)
         end
         if #all_recipes[recipe].ingredients > 0 then
-            all_recipes[recipe].enabled = nil
+            all_recipes[recipe].enabled = false
         end
     end
 end

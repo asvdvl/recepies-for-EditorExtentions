@@ -9,7 +9,7 @@ local function message_handler()
     local message = ""  --{""}
     for key in pairs(recipes) do
         local recipe_proto, tech_proto = game.recipe_prototypes[key], game.technology_prototypes[tech_prefix..key]
-        if not (recipe_proto and recipe_proto.enabled) or (tech_proto and not tech_proto.enabled) then
+        if not (recipe_proto and recipe_proto.enabled) and (tech_proto and not tech_proto.enabled) then
             message = message..'`'..key..'`, '
             --disabled because I don’t want to deal with the problem of the translations limit yet
             --[[table.insert(message, key)
@@ -36,4 +36,5 @@ end
 
 script.on_init(reinit)
 script.on_configuration_changed(reinit)
+commands.add_command("rfee-recheck-recipes", nil, reinit)
 script.on_nth_tick(60, message_handler)
