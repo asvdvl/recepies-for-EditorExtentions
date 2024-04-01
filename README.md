@@ -1,11 +1,13 @@
+[ru desctiption](https://github.com/asvdvl/recepies-for-EditorExtentions/blob/master/README.ru.md)
 
 # Auto-generated recipes for the Editor Extensions mod
 
 > may be unstable at the moment, I will be grateful if you report errors to me
 
 ## Goals (and limitations for me):
+> not all recipes are dynamic, the mod has 3 out of 27 recipes with hardcode: a linked conveyor belt with a chest (partially) and night vision goggles (entirely)
+
 - dynamically, without using "hardcoding":
-> It didn’t work out completely, the mod has 3 of 27 recipes with a hardcode: a linked conveyor belt with a chest (partially) and night vision goggles (entirely)
 	- generating recipes for items based on their "properties"
 	- generating a module recipe using combinatorial optimization
 	- satisfy situations when a creative item does not require energy but should
