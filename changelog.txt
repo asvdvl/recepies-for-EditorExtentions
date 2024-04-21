@@ -1,4 +1,12 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.0.3
+Date: 2024-04-21
+  Features:
+    - added the ability to turn items on or off individually
+  Locale:
+    - technology names are now generated directly from the EE mod (meaning that the technologies are now translated into all languages ​​that EE supports)
+    - localization has been optimized by splitting names into component parts
+---------------------------------------------------------------------------------------------------
 Version: 1.0.2
 Date: 2024-03-30
   Changes:
