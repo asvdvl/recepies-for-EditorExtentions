@@ -53,6 +53,8 @@
 ## Included items and balance comments:
 * I must say right away that this mod turns out to be endgame content, and I think this is fair
 
+* Each item can be individually turned on or off in the settings
+
 - Linked belt
 	- The logic is very simple, imagine that an electric motor was inserted into a cargo wagon and it now runs underground, if it weren’t for the condition that I would not change the EE code, then I would force player to put inside conveyors equal to the distance between 2 points, but I’ve already been developing the mod for a month.
 

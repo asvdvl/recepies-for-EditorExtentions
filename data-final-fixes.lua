@@ -330,6 +330,8 @@ for recipe in pairs(recipes) do
     local new_tech = {
         type = "technology",
         name = "rfEE_",
+        localised_name={"?", {"entity-name."..recipe}, {"item-name."..recipe}, {"equipment-name."..recipe}, },
+        localised_description={"?", {"entity-description."..recipe}, {"item-description."..recipe}, {"equipment-description."..recipe}, },
         enabled = false,
         hidden = true,
         effects =

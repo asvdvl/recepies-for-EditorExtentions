@@ -8,10 +8,14 @@ local function message_handler()
     end
     local message = ""  --{""}
     local fixed_recipes = 0
+    local pref = define.prefixes
     for recipe in pairs(recipes) do
         local recipe_proto, tech_proto = game.recipe_prototypes[recipe], game.technology_prototypes[tech_prefix..recipe]
 
-        if not (recipe_proto and recipe_proto.enabled) and (tech_proto and not tech_proto.enabled) then
+        if not (recipe_proto and recipe_proto.enabled)                      --if there is no recipe or it is turned off
+            and not (tech_proto and tech_proto.enabled)                     --if there is no technology or it is turned off
+            and settings.startup[pref.mod..pref.items_ctr..recipe].value    --and the item is enabled in settings
+        then
             message = message..'`'..recipe..'`, '
             --disabled because I don’t want to deal with the problem of the translations limit yet
             --[[table.insert(message, key)
@@ -26,12 +30,13 @@ local function message_handler()
         else
             --blocking recipes enabled without technology
             for _, force in pairs(game.forces) do
-                if not force.technologies[tech_proto.name].researched and force.recipes[recipe_proto.name].enabled then
-                    --[[local tech = force.technologies[tech_proto.name]
-                    tech.researched=true
-                    tech.researched=false]]     --one way to solve the problem
-                    force.recipes[recipe_proto.name].enabled = false
-                    fixed_recipes = fixed_recipes + 1
+                if recipe_proto and tech_proto then
+                    local tech = force.technologies[tech_proto.name]
+                    local recip = force.recipes[recipe_proto.name]
+                    if tech and recip and not tech.researched and recip.enabled then
+                        recip.enabled = false
+                        fixed_recipes = fixed_recipes + 1
+                    end
                 end
             end
         end

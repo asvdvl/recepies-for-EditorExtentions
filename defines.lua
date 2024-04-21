@@ -284,6 +284,7 @@ defines.balancing_items_table = {
 --definitions for settings
 defines.prefixes = {
     mod = "rfEE",                   --usually its use is useless and harmful but I left it
+    items_ctr = "itemscontrol",
     balancing = "_balancing",
     name = "a-item-name",
     value = "effect-value",
@@ -303,31 +304,43 @@ end
 function defines.init_items_table(data_raw, settings_startup) --must be called from code with access to data.raw
     --modules
     local effect_table
-    for setting_name, value in pairs(settings_startup) do
-        if setting_name:sub(1, #defines.prefixes.mod) == defines.prefixes.mod then
-            local _, _, effect_sign, nameorvalue, effect_name = setting_name:find("rfEE_(%w+)"..defines.prefixes.balancing.."([%w-]+_)(%w+)")
-            if effect_sign and nameorvalue and effect_name then
-                effect_table = defines.balancing_items_table.effect[effect_sign][effect_name]
-                if nameorvalue == defines.prefixes.name then
-                    effect_table[1] = value.value
-                elseif nameorvalue == defines.prefixes.value then
-                    effect_table[2] = value.value
+    local pref = defines.prefixes
+    for setting_name, val in pairs(settings_startup) do
+        local value = val.value
+        if setting_name:sub(1, #pref.mod) == pref.mod then
+            if setting_name:find(pref.balancing, nil, true) then
+                local _, _, effect_sign, nameorvalue, effect_name = setting_name:find(pref.mod.."(%w+)"..pref.balancing.."([%w-]+_)(%w+)")
+                if effect_sign and nameorvalue and effect_name then
+                    effect_table = defines.balancing_items_table.effect[effect_sign][effect_name]
+                    if nameorvalue == pref.name then
+                        effect_table[1] = value
+                    elseif nameorvalue == pref.value then
+                        effect_table[2] = value
+                    end
+                end
+            elseif setting_name:find(pref.items_ctr, nil, true) and not value then
+                local _, _, item_name = setting_name:find(pref.mod..pref.items_ctr.."([%w-]+)")
+                if item_name then   --not needed but added as a last resort
+                    log("item "..item_name.." is disabled in settings")
+                    defines.recipes[item_name] = nil
                 end
             end
         end
     end
 
     --correct underground conveyor for linked conveyor(part of the code from EE)
-    local fastest_speed, fastest_speed_protoname, recipe_rows = 0, "", defines.recipes["ee-linked-belt"].recipe
-    for _, prototype in pairs(data.raw["underground-belt"]) do
-      if prototype.speed > fastest_speed then
-        fastest_speed = prototype.speed
-        fastest_speed_protoname = prototype.name
-      end
-    end
-    local ind = ftable.find(recipe_rows, dummy_underground_belt_item)
-    if ind then
-        recipe_rows[ind].name = fastest_speed_protoname
+    if defines.recipes["ee-linked-belt"] then
+        local fastest_speed, fastest_speed_protoname, recipe_rows = 0, "", defines.recipes["ee-linked-belt"].recipe
+        for _, prototype in pairs(data.raw["underground-belt"]) do
+          if prototype.speed > fastest_speed then
+            fastest_speed = prototype.speed
+            fastest_speed_protoname = prototype.name
+          end
+        end
+        local ind = ftable.find(recipe_rows, dummy_underground_belt_item)
+        if ind then
+            recipe_rows[ind].name = fastest_speed_protoname
+        end
     end
 end
 
@@ -361,17 +374,18 @@ function defines.init_balancing_items_table_post_recepies_process(data_raw, sett
         log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(type_tabl_defines)..' )!(should not be nil)')
     end
 
-    if #defines.balancing_items_table.energy.electric > 0 then
+    local recipes = defines.recipes
+    if #defines.balancing_items_table.energy.electric > 0 and recipes["ee-linked-belt"] and recipes["ee-linked-chest"] then
         --adding reactor to linked conveyor and to linked-chest
         local electric = defines.balancing_items_table.energy.electric
-        table.insert(defines.recipes["ee-linked-belt"].recipe, {type="item", name=electric[1][1], amount=1})
+        table.insert(recipes["ee-linked-belt"].recipe, {type="item", name=electric[1][1], amount=1})
         --[[
             x = (#electric <= 2 and 1 or 2):
                 {1: x <= 2}
             x = {2: x > 2}
             if below or equal 2 then x = 1 else x = 2
         ]]
-        table.insert(defines.recipes["ee-linked-chest"].recipe, {type="item", name=electric[#electric <= 2 and 1 or 2][1], amount=1})
+        table.insert(recipes["ee-linked-chest"].recipe, {type="item", name=electric[#electric <= 2 and 1 or 2][1], amount=1})
     end
 end
 
