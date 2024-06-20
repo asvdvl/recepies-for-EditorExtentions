@@ -42,11 +42,15 @@ local function message_handler()
         end
     end
     if #message > 1 then
-        game.print({"", {"rfEE_message.startup-message", message}})
+        if settings.global["rfEE_report_missing_items"].value then
+            game.print({"", {"rfEE_message.startup-message", message}})
+        end
         log({"", {"rfEE_message.startup-message", message}})
     end
     if fixed_recipes > 0 then
-        game.print({"", {"rfEE_message.fixed_recipes", fixed_recipes}})
+        if settings.global["rfEE_report_missing_items"].value then
+            game.print({"", {"rfEE_message.fixed_recipes", fixed_recipes}})
+        end
         log({"", {"rfEE_message.fixed_recipes", fixed_recipes}})
     end
     global.message_was_shown = true

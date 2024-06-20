@@ -47,6 +47,9 @@
 
 ![recipes](/gallery/recipes.png)
 ![linked chest](/gallery/linked-chest.png)
+![settings 1/3](/gallery/settings1.png)
+![settings 2/3](/gallery/settings2.png)
+![settings 3/3](/gallery/settings3.png)
 
 </details>
 

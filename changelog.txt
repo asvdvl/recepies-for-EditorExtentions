@@ -1,4 +1,18 @@
 ---------------------------------------------------------------------------------------------------
+Version: 1.1.0
+Date: 2024-06-20
+  Info:
+    - updated recipe card
+    - reset settings to default to apply balance changes
+  Changes:
+    - Increased the number of night vision goggles in the ingredients for super night vision goggles
+    - Shape is now taken into account for armor elements
+    - the price of wood as a pollution remover has been increased
+    - added setting to ignore missing items (the message will not appear in the chat)
+  Minor Features:
+    - added ignore_fields to ignore some parameters on specified items
+    - in the multiplier it is now possible to write custom code for complex operations
+---------------------------------------------------------------------------------------------------
 Version: 1.0.3
 Date: 2024-04-21
   Features:

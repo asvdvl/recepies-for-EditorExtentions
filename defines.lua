@@ -1,6 +1,7 @@
 local defines = {}
 local dummy_underground_belt_item = {type="item", name="underground-belt", amount=1}
 local ftable = require("__flib__/table")
+local stdtable = require('__stdlib__/stdlib/utils/table')
 
 defines.item_processing_prefix = "item"
 defines.recipes = {
@@ -35,13 +36,17 @@ defines.recipes = {
     ["ee-super-pump"]={},
 
     --energy
-    ["ee-super-electric-pole"]={},
+    ["ee-super-electric-pole"]={
+        ignore_fields = {"supply_area_distance"},
+    },
     ["ee-super-fuel"]={
         type = defines.item_processing_prefix.."_generated",
         name_filter = "fuel",
         search_rows = {fuel_value = 1, fuel_acceleration_multiplier = 1, fuel_top_speed_multiplier = 1},
     },
-    ["ee-super-substation"]={},
+    ["ee-super-substation"]={
+        ignore_fields = {"maximum_wire_distance"},
+    },
 
     --equipment
     ["ee-infinity-fusion-reactor-equipment"]={},
@@ -51,7 +56,7 @@ defines.recipes = {
     ["ee-super-night-vision-equipment"]={
         type = "defined",
         recipe = {
-            {type="item", name="night-vision-equipment", amount=1},
+            {type="item", name="night-vision-equipment", amount=4},
             {type="item", name="processing-unit", amount=50},
             {type="item", name="effectivity-module", amount=1},
         }
@@ -83,6 +88,10 @@ for _, value in pairs(defines.recipes) do
         value.type = "generated"
         value.recipe = {}
     end
+
+    if value.ignore_fields then
+        value.ignore_fields = stdtable.array_to_dictionary(value.ignore_fields, true)
+    end
 end
 
 local function empty_function(data_raw_category, recipe_object--[[, recipes_table, types_table]])
@@ -91,6 +100,7 @@ local function empty_function(data_raw_category, recipe_object--[[, recipes_tabl
     end
 end
 
+local shape_def = "-(val.width * val.height)"
 defines.types = {
     --defined
     ["linked-belt"] = {
@@ -134,14 +144,13 @@ defines.types = {
 
     ["energy-shield-equipment"] = {
         keyword = "base_property",
-        search_rows = {"max_shield_value"},
+        search_rows = {"max_shield_value", ["shape"] = shape_def},
         restrict_power_fix = true
     },
 
     ["movement-bonus-equipment"] = {
         keyword = "base_property",
-        search_rows = {"movement_bonus"},
-        --restrict_power_fix = true     --disabled because power consumption too low
+        search_rows = {["movement_bonus"] = 100, ["shape"] = shape_def}
     },
 
     --energy related stuff but compatible with base_property(thanks flib)
@@ -152,7 +161,7 @@ defines.types = {
 
     ["generator-equipment"] = {
         keyword = "base_property",
-        search_rows = {"power"},
+        search_rows = {"power", ["shape"] = shape_def},
         restrict_power_fix = true
     },
 
@@ -169,28 +178,28 @@ defines.types = {
             due to the overlapping of these values ​​with each other when the game actually
             scanning radius is calculated by active_radius * scanning_radius
         ]]
-        search_rows = {["max_distance_of_nearby_sector_revealed"] = "^2"}
+        search_rows = {["max_distance_of_nearby_sector_revealed"] = "val^2"}
     },
 
     ["roboport"] = {
         keyword = "base_property",
-        search_rows = {["logistics_radius"] = "^2", ["construction_radius"] = "^2"}
+        search_rows = {["logistics_radius"] = "val^2", ["construction_radius"] = "val^2"}
     },
 
     ["roboport-equipment"] = {
         keyword = "base_property",
-        search_rows = {["construction_radius"] = "^2"},
+        search_rows = {["construction_radius"] = "val^2", ["shape"] = shape_def},
         restrict_power_fix = true
     },
 
     ["beacon"] = {
         keyword = "base_property",
-        search_rows = {["supply_area_distance"] = "^2"}
+        search_rows = {["supply_area_distance"] = "val^2"}
     },
 
     ["electric-pole"] = {
         keyword = "base_property",
-        search_rows = {"maximum_wire_distance", ["supply_area_distance"] = "^2"}
+        search_rows = {"maximum_wire_distance", ["supply_area_distance"] = "val^2"}
     },
 
     --items are too complex for processing, i just moved search_rows to recipes table
@@ -207,7 +216,7 @@ defines.types = {
 
     ["battery-equipment"] = {
         keyword = "base_property",
-        search_rows = {"energy_source/buffer_capacity"},
+        search_rows = {"energy_source/buffer_capacity", ["shape"] = shape_def},
         restrict_power_fix = true
     },
 }
@@ -262,22 +271,14 @@ defines.balancing_items_table = {
             productivity = {"productivity-module", 4/100}   --same as with speed effect
         },
         negative = {
-            pollution = {"wood", -1/100},                  --wood absorbs pollution
+            pollution = {"wood", -1/1000},                  --wood absorbs pollution
             consumption = {"battery", -1/100},              --same as with positive speed effect
             speed = {"heavy-oil-barrel", -1/250},          --let's imagine that this module pours fuel oil onto the gears, causing a slowdown :)
             productivity = {"raw-fish", -1/100}            --I have no idea what to put here, but a module with this effect is not needed at all
         }
     },
     energy = {
---[[        heat = {
-
-        },]]
-        electric = {
-
-        },
---[[        battery = {
-
-        }]]
+        electric = {}
     }
 }
 

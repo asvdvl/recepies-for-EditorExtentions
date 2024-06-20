@@ -145,11 +145,18 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
     utils.log("base_property_stuff work on "..recipe_object.name)
     local max_value_for_target_item = math.abs(utils.find_diff_value(types_table.search_rows, data_raw_category[recipe_object.name]))
     local maxValue = 0
+    local search_rows = types_table.search_rows
+    if recipes_table.ignore_fields then
+        search_rows = stdtable.filter(search_rows, function (v, k)
+            return not recipes_table.ignore_fields[k]
+        end)
+    end
 
     for _, item in pairs(data_raw_category) do
         lev:add()
-        utils.log("comparing to "..item.name)
-        local pairValue = math.abs(utils.find_diff_value(types_table.search_rows, item))
+
+        local pairValue = math.abs(utils.find_diff_value(search_rows, item))
+        utils.log("comparing to "..item.name.." ("..tostring(pairValue)..")")
         if utils.is_item_NOT_from_EE(item.name)
             and (
                 pairValue < max_value_for_target_item   --checking that the item does not have stats higher than those from the EE mod

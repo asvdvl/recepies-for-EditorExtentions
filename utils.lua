@@ -16,17 +16,18 @@ end
 --- @param x integer|string
 --- @param multiplier integer|string
 --- @return integer
-function utils.perfom_math_from_string(x, multiplier)
-    local func, errorMsg = load("return "..x..multiplier)
+function utils.perfom_math_from_string(val, expression)
+    local env = {val = val}
+    local func, errorMsg = load("return "..expression, "expression", "t", env)
     if func then
         local status, result = pcall(func)
         if status then
             return result
         else
-            error('error when executing expression ('..x..', '..multiplier..') by reason '..result)
+            error('error when executing expression ('..expression..') by reason '..result)
         end
     else
-        error('error when executing expression ('..x..', '..multiplier..') by reason '..errorMsg)
+        error('error when executing expression ('..expression..') by reason '..errorMsg)
     end
 end
 
@@ -190,7 +191,7 @@ function utils.find_diff_value(search_rows, item)
     local totalSum = 0
     local value = 0
     local row, subrow, parts
-    for row_name, multiplier in pairs(search_rows) do
+    for row_name, mul_or_exp in pairs(search_rows) do
         if row_name:find("/") then
             --I'm too lazy to implement a recursive property lookup, so we'll limit ourselves to only level 2
             parts = utils.split(row_name, "/")
@@ -203,17 +204,17 @@ function utils.find_diff_value(search_rows, item)
         end
         if row then
             value = 0
-            if type(row) == "number" then
+            if type(row) == "number" or type(row) == "table" then
                 value = row
             elseif type(row) == "string" then
                 value = get_energy_value(row) or tostring(row) or 0
             elseif type(row) == "boolean" then
                 value = 1
             end
-            if type(multiplier) == "number" then
-                totalSum = totalSum + (value * multiplier)
-            elseif type(multiplier) == "string" then
-                totalSum = totalSum + utils.perfom_math_from_string(value, multiplier)
+            if type(mul_or_exp) == "number" then
+                totalSum = totalSum + (value * mul_or_exp)
+            elseif type(mul_or_exp) == "string" then
+                totalSum = totalSum + utils.perfom_math_from_string(value, mul_or_exp)
             end
         else
             log('property `'..row_name..'` is `'..tostring(row)..'`. prototype `'..item.name..'` (just warning, you can ignore this)')

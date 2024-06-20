@@ -50,10 +50,17 @@ data:extend({
     },
     {
         type = "bool-setting",
+        name = "rfEE_report_missing_items",
+        setting_type = "runtime-global",
+        default_value = true,
+        order = "fa"
+    },
+    {
+        type = "bool-setting",
         name = "rfEE_debug",
         setting_type = "startup",
         default_value = false,
-        order = "f"
+        order = "fb"
     },
     {
         type = "bool-setting",
