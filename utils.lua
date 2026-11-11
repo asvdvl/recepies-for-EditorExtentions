@@ -12,9 +12,9 @@ function utils.is_item_NOT_from_EE(item_name)
     return defines.recipes[item_name] or string.sub(item_name, 1, 3) ~= "ee-"
 end
 
---- allows to specify some "code" in a string that is executed here. for example (25, '^2') -> 625
---- @param x integer|string
---- @param multiplier integer|string
+--- allows to specify some "code" in a string that is executed here. for example (25, 'val^2') -> 625
+--- @param val integer|string will be apply as val in global space for expression param
+--- @param expression integer|string
 --- @return integer
 function utils.perfom_math_from_string(val, expression)
     local env = {val = val}

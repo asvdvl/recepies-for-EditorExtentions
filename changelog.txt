@@ -1,4 +1,19 @@
 ---------------------------------------------------------------------------------------------------
+Version: 2.1.0
+Date: 2026-11-11
+  Changes:
+    - ported to 2.1
+    - replaced stdlib helpers with local ones (stdlib has no 2.1 version)
+    - replaced the removed flib partial_sort with table.sort
+    - updated Editor Extensions item names (fission reactor, efficiency/inefficiency modules)
+    - removed the chat notification about recipes disabled without research (the fix itself is kept)
+  Bugfixes:
+    - technology research ingredients are now an array (2.0+ format)
+    - global -> storage
+    - game.recipe_prototypes / game.technology_prototypes -> prototypes.recipe / prototypes.technology
+    - fixed duplicate technology prerequisites (e.g. "recycling" from the built-in recycler mod) and double-counted prerequisite costs
+    - clamped technology science pack amounts to the engine limit (uint16, 65535)
+---------------------------------------------------------------------------------------------------
 Version: 1.1.0
 Date: 2024-06-20
   Info:

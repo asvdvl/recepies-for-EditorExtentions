@@ -1,7 +1,15 @@
 local defines = {}
 local dummy_underground_belt_item = {type="item", name="underground-belt", amount=1}
 local ftable = require("__flib__/table")
-local stdtable = require('__stdlib__/stdlib/utils/table')
+
+-- stdlib is not available for 2.1, so keep the small helpers we used locally
+local function array_to_dictionary(array, value)
+    local result = {}
+    for _, item in pairs(array) do
+        result[item] = value or true
+    end
+    return result
+end
 
 defines.item_processing_prefix = "item"
 defines.recipes = {
@@ -49,7 +57,7 @@ defines.recipes = {
     },
 
     --equipment
-    ["ee-infinity-fusion-reactor-equipment"]={},
+    ["ee-infinity-fission-reactor-equipment"]={},
     ["ee-super-energy-shield-equipment"]={},
     ["ee-super-battery-equipment"]={},
     ["ee-super-exoskeleton-equipment"]={},
@@ -58,7 +66,7 @@ defines.recipes = {
         recipe = {
             {type="item", name="night-vision-equipment", amount=4},
             {type="item", name="processing-unit", amount=50},
-            {type="item", name="effectivity-module", amount=1},
+            {type="item", name="efficiency-module", amount=1},
         }
     },
     ["ee-super-personal-roboport-equipment"]={},
@@ -71,11 +79,11 @@ defines.recipes = {
     --modules/effects
     ["ee-super-beacon"]={},
     ["ee-super-speed-module"]={},
-    ["ee-super-effectivity-module"]={},
+    ["ee-super-efficiency-module"]={},
     ["ee-super-productivity-module"]={},
     ["ee-super-clean-module"]={},
     ["ee-super-slow-module"]={},
-    ["ee-super-ineffectivity-module"]={},
+    ["ee-super-inefficiency-module"]={},
     ["ee-super-dirty-module"]={},
 
     --other
@@ -90,7 +98,7 @@ for _, value in pairs(defines.recipes) do
     end
 
     if value.ignore_fields then
-        value.ignore_fields = stdtable.array_to_dictionary(value.ignore_fields, true)
+        value.ignore_fields = array_to_dictionary(value.ignore_fields, true)
     end
 end
 
@@ -348,7 +356,6 @@ end
 function defines.init_balancing_items_table_post_recepies_process(data_raw, settings_startup)
     local utils = require("utils")
     local elect_table = defines.balancing_items_table.energy.electric
-    local next_index = 0
 
     local function my_comp(a, b)
         return a[2] <= b[2]
@@ -368,9 +375,7 @@ function defines.init_balancing_items_table_post_recepies_process(data_raw, sett
                 end
             end
         end
-        while not utils.is_sorted(elect_table, my_comp) do
-            next_index = ftable.partial_sort(elect_table, next_index, #elect_table, my_comp)
-        end
+        table.sort(elect_table, my_comp)
     else
         log('warning! the specified category does not exist(data.raw: '..tostring(data_raw[compensation_cat])..', rwEE types table:'..tostring(type_tabl_defines)..' )!(should not be nil)')
     end

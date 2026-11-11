@@ -2,9 +2,9 @@
     "title": "Recipes for EditorExtentions",
     "name": "recepies-for-EditorExtentions",
     "author": "asvdev(in game - Dial-up)",
-    "factorio_version": "1.1",
-    "version": "1.1.0",
-    "dependencies": ["base >= 0.18.0", "flib >= 0.3.2", "stdlib >= 1.0.0", "EditorExtensions"],
+    "factorio_version": "2.1",
+    "version": "2.1.0",
+    "dependencies": ["base >= 2.1.0", "flib >= 0.17.0", "EditorExtensions >= 2.6.1"],
     "description": "Generates 'legal' recipes for items from the Editor Extensions mod",
     "homepage": "https://github.com/asvdvl/recepies-for-EditorExtentions",
     "package":{

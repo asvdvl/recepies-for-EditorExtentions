@@ -4,8 +4,30 @@ local start_settings = settings.startup
 --recipes for which I can find legal crafting
 local defines = require("defines")
 local get_energy_value = require("__flib__/data-util").get_energy_value
-local stdtable = require('__stdlib__/stdlib/utils/table')
 local utils = require("utils")
+
+-- stdlib is not available for 2.1, so keep the small helpers we used locally
+local function table_filter(tbl, predicate)
+    local result = {}
+    for key, value in pairs(tbl) do
+        if predicate(value, key) then
+            result[key] = value
+        end
+    end
+    return result
+end
+
+local function table_is_empty(tbl)
+    return next(tbl) == nil
+end
+
+-- 1.1 used {bonus = number} for module effects, 2.0+ uses a plain number
+local function effect_bonus(value)
+    return type(value) == "table" and value.bonus or value
+end
+
+-- recipe item amounts and technology science pack amounts are uint16 in the engine (max 65535)
+local MAX_ITEM_AMOUNT = 65535
 
 local recipes = defines.recipes
 local lev = utils.log_lev
@@ -36,12 +58,12 @@ local function module_top_items_prepairing(data_raw_category, top_items)
             for effect_name, v in pairs(module_props.effect) do
                 lev:add()
 
-                effect_value = v.bonus
+                effect_value = effect_bonus(v)
                 utils.log('effect_value: '..effect_value)
                 current_data = utils.get_right_table_by_value(effect_value, top_items_data.positive, top_items_data.negative)
 
                 local item_tech = utils.is_item_has_technology(module)
-                if (math.abs(effect_value) > math.abs(current_data[effect_name][2])) and item_tech and item_tech[1] and item_tech[2] then
+                if current_data[effect_name] and (math.abs(effect_value) > math.abs(current_data[effect_name][2])) and item_tech and item_tech[1] and item_tech[2] then
                     utils.log('effect_value: is > '..tostring(math.abs(current_data[effect_name][2])))
 
                     current_data[effect_name] = {module, effect_value}
@@ -65,9 +87,13 @@ end
 local function is_solution_are_found(current_effects, top_items_data)
     local top_effect_val
     for effect_name, effect_value in pairs(current_effects) do
-        top_effect_val = utils.get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
-        if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
-            return false
+        local positive = top_items_data.positive[effect_name]
+        local negative = top_items_data.negative[effect_name]
+        if positive and negative then
+            top_effect_val = utils.get_right_table_by_value(effect_value, positive, negative)
+            if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
+                return false
+            end
         end
     end
     return true
@@ -101,16 +127,18 @@ local function module_processing(data_raw_category, recipe_object, recipes_table
     local current_effects = {}
     local ingridients_raw = {}
     for effect_name, v in pairs(data_raw_category[recipe_object.name].effect) do
-        effect_value = v.bonus --pull out the desired value from the table
-        current_effects[effect_name] = effect_value + effect_value*((start_settings["rfEE_recipes_ingredient_increase_percent"].value/100)-1)
+        if top_items_data.positive[effect_name] and top_items_data.negative[effect_name] then
+            effect_value = effect_bonus(v) --pull out the desired value from the table
+            current_effects[effect_name] = effect_value + effect_value*((start_settings["rfEE_recipes_ingredient_increase_percent"].value/100)-1)
+        end
     end
 
     --now we can start looking for the number of items in the recipe
     local amount = 0
     while not is_solution_are_found(current_effects, top_items_data) do
         for effect_name, effect_value in pairs(current_effects) do
-            top_effect_val = utils.get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
-            if math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
+            local top_effect_val = utils.get_right_table_by_value(effect_value, top_items_data.positive[effect_name], top_items_data.negative[effect_name])
+            if top_effect_val and math.abs(effect_value)-math.abs(top_effect_val[2]) > 0 then
                 amount = math.ceil(math.abs(effect_value/top_effect_val[2]))
                 if ingridients_raw[top_effect_val[1]] then
                     ingridients_raw[top_effect_val[1]] = ingridients_raw[top_effect_val[1]] + amount
@@ -120,7 +148,7 @@ local function module_processing(data_raw_category, recipe_object, recipes_table
 
                 if data_raw_category[top_effect_val[1]] then
                     for effect_name_2, v in pairs(data_raw_category[top_effect_val[1]].effect) do
-                        effect_value_2 = v.bonus
+                        effect_value_2 = effect_bonus(v)
                         current_effects[effect_name_2] = (current_effects[effect_name_2] or 0) - (effect_value_2*amount)
                     end
                 else
@@ -147,7 +175,7 @@ local function base_property_stuff(data_raw_category, recipe_object, recipes_tab
     local maxValue = 0
     local search_rows = types_table.search_rows
     if recipes_table.ignore_fields then
-        search_rows = stdtable.filter(search_rows, function (v, k)
+        search_rows = table_filter(search_rows, function (v, k)
             return not recipes_table.ignore_fields[k]
         end)
     end
@@ -275,9 +303,10 @@ for recipe, recipe_def_table in pairs(recipes) do
     local total_power_req = 0
     for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
         --fix "free energy items", part1, finding how much energy an object needs
-        local entity = data.raw[utils.find_prototype_category(recipe_row.name)][recipe_row.name]
+        local entity_category = utils.find_prototype_category(recipe_row.name)
+        local entity = entity_category and data.raw[entity_category][recipe_row.name] or nil
         local power_req = 0
-        if recipe_def_table.type ~= "defined" then
+        if entity and recipe_def_table.type ~= "defined" then
             if entity.energy_source then
                 for key in pairs(energy_source_fields) do
                     power_req = power_req + (get_energy_value(entity.energy_source[key] or 0) or 0)
@@ -331,6 +360,8 @@ lev:add()
 for recipe in pairs(recipes) do
     utils.log('apply tech for '..recipe)
     local ingredients_req = {}
+    local ingredients_index = {}
+    local prerequisites_set = {}
     local total_count = 10
     local total_time = 10
 
@@ -360,7 +391,7 @@ for recipe in pairs(recipes) do
 
     local item = data.raw.item[recipe] or data.raw[utils.find_prototype_category(recipe)][recipe]
     if item and (item.icons or item.icon) then
-        new_tech.icons = item.icons or {icon = item.icon, icon_size = item.icon_size, icon_mipmaps = item.icon_mipmaps, tint = item.tint}
+        new_tech.icons = item.icons or {{icon = item.icon, icon_size = item.icon_size, tint = item.tint}}
     elseif item and item.sprite then
         local sprite = item.sprite
         new_tech.icon = sprite.filename
@@ -376,7 +407,7 @@ for recipe in pairs(recipes) do
         for _, ingr_row in pairs(all_recipes[recipe].ingredients) do
             item_left = item_left - 1
             local tech_name_table = utils.is_item_has_technology(ingr_row.name)
-            if not tech_name_table and item_left == 0 and stdtable.is_empty(ingredients_req) and defines.types[utils.find_prototype_category(recipe)].fallback_research then
+            if not tech_name_table and item_left == 0 and table_is_empty(ingredients_req) and defines.types[utils.find_prototype_category(recipe)].fallback_research then
                 local ingr_proto = utils.find_prototype_category(recipe)
                 --table.insert(new_tech.prerequisites, defines.types[ingr_proto].fallback_research)
                 tech_name_table = {defines.types[ingr_proto].fallback_research}
@@ -384,16 +415,23 @@ for recipe in pairs(recipes) do
             if tech_name_table and tech_name_table[1] then
                 local tech_name = tech_name_table[1]
                 local tech = data.raw.technology[tech_name]
-                total_count = total_count + (tech.unit.count or total_count)
-                total_time  = total_time  + (tech.unit.time or total_time)
-                table.insert(new_tech.prerequisites, tech_name)
-                for _, tech_science_row in pairs(tech.unit.ingredients) do
-                    local science_name = tech_science_row[1]
-                    local science_value = tech_science_row[2]
-                    if ingredients_req[science_name] then
-                        ingredients_req[science_name][2] = ingredients_req[science_name][2] + science_value
-                    else
-                        ingredients_req[science_name] = {science_name, science_value}
+                -- the same technology can unlock several ingredients, count it only once
+                if tech and tech.unit and not prerequisites_set[tech_name] then
+                    prerequisites_set[tech_name] = true
+                    total_count = total_count + (tech.unit.count or 0)
+                    total_time  = total_time  + (tech.unit.time or 0)
+                    table.insert(new_tech.prerequisites, tech_name)
+                    for _, tech_science_row in pairs(tech.unit.ingredients or {}) do
+                        local science_name = tech_science_row[1]
+                        local science_value = tech_science_row[2]
+                        local existing = ingredients_index[science_name]
+                        if existing then
+                            existing[2] = math.min(MAX_ITEM_AMOUNT, existing[2] + science_value)
+                        else
+                            local row = {science_name, math.min(MAX_ITEM_AMOUNT, science_value)}
+                            ingredients_index[science_name] = row
+                            table.insert(ingredients_req, row)
+                        end
                     end
                 end
             end
@@ -402,7 +440,7 @@ for recipe in pairs(recipes) do
         new_tech.unit.count = total_count  + total_count*percent
         new_tech.unit.time = total_time  + total_time*percent
 
-        if not stdtable.is_empty(new_tech.unit.ingredients) or start_settings["rfEE_ignore_empty_technologies"].value then
+        if not table_is_empty(new_tech.unit.ingredients) or start_settings["rfEE_ignore_empty_technologies"].value then
             new_tech.enabled = true
             new_tech.hidden = false
             utils.log(recipe..' enabled. req: '..serpent.block(ingredients_req))

@@ -3,14 +3,14 @@ local recipes = define.recipes
 local tech_prefix = define.prefixes.mod
 
 local function message_handler()
-    if global.message_was_shown then
+    if storage.message_was_shown then
         return
     end
     local message = ""  --{""}
     local fixed_recipes = 0
     local pref = define.prefixes
     for recipe in pairs(recipes) do
-        local recipe_proto, tech_proto = game.recipe_prototypes[recipe], game.technology_prototypes[tech_prefix..recipe]
+        local recipe_proto, tech_proto = prototypes.recipe[recipe], prototypes.technology[tech_prefix..recipe]
 
         if not (recipe_proto and recipe_proto.enabled)                      --if there is no recipe or it is turned off
             and not (tech_proto and tech_proto.enabled)                     --if there is no technology or it is turned off
@@ -48,19 +48,18 @@ local function message_handler()
         log({"", {"rfEE_message.startup-message", message}})
     end
     if fixed_recipes > 0 then
-        if settings.global["rfEE_report_missing_items"].value then
-            game.print({"", {"rfEE_message.fixed_recipes", fixed_recipes}})
-        end
-        log({"", {"rfEE_message.fixed_recipes", fixed_recipes}})
+        -- no chat notification here on purpose: the fix itself is enough,
+        -- the message was only noise for players
+        log("rfEE: disabled " .. fixed_recipes .. " recipe(s) that were enabled without a researched technology")
     end
-    global.message_was_shown = true
+    storage.message_was_shown = true
 end
 
 local function reinit()
-    global.message_was_shown = false
+    storage.message_was_shown = false
 end
 
 script.on_init(reinit)
 script.on_configuration_changed(reinit)
-commands.add_command("rfee-recheck-recipes", nil, reinit)
+commands.add_command("rfee-recheck-recipes", {"", "recheck recipes"}, reinit)
 script.on_nth_tick(60, message_handler)
