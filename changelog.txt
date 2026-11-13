@@ -1,13 +1,22 @@
 ---------------------------------------------------------------------------------------------------
 Version: 2.1.0
-Date: 2026-11-11
+Date: 2026-11-13
   Changes:
     - ported to 2.1
     - replaced stdlib helpers with local ones (stdlib has no 2.1 version)
     - replaced the removed flib partial_sort with table.sort
     - updated Editor Extensions item names (fission reactor, efficiency/inefficiency modules)
     - removed the chat notification about recipes disabled without research (the fix itself is kept)
+    - overpowered ingredients (amount above 65535) are now compressed into packs: factor 65535, packs are unlocked together with the item's technology, use the target item's icon with a tier digit, live in a separate Editor Extensions subgroup, and show a localized `tier N/M` suffix
+    - removed the `rfEE_divider_time_to_craft_overpower_items` setting (no longer needed)
+    - added a produce achievement for every craftable EE item
+    - added en/ru localisation for pack and achievement names
+    - packs can be recycled back into the previous stage/original item through the recycler; one pack returns its full contents (65535 of the previous stage)
+    - added recipes/technologies/achievements for the new Editor Extensions 2.7.0 items: super stack inserter and super quality module
+    - added quality effect balancing for modules
+    - skip recipes whose prototypes are missing (e.g. Editor Extensions without Space Age)
   Bugfixes:
+    - fixed unknown locale keys for equipment packs/achievements (equipment items use `equipment-name`, not `item-name`)
     - technology research ingredients are now an array (2.0+ format)
     - global -> storage
     - game.recipe_prototypes / game.technology_prototypes -> prototypes.recipe / prototypes.technology

@@ -40,6 +40,7 @@ defines.recipes = {
             {type="item", name="steel-chest", amount=1},
         }},
     ["ee-super-inserter"]={},
+    ["ee-super-stack-inserter"]={},
     ["ee-super-locomotive"]={},
     ["ee-super-pump"]={},
 
@@ -82,6 +83,7 @@ defines.recipes = {
     ["ee-super-efficiency-module"]={},
     ["ee-super-productivity-module"]={},
     ["ee-super-clean-module"]={},
+    ["ee-super-quality-module"]={},
     ["ee-super-slow-module"]={},
     ["ee-super-inefficiency-module"]={},
     ["ee-super-dirty-module"]={},
@@ -137,7 +139,7 @@ defines.types = {
 
     ["inserter"] = {
         keyword = "base_property",
-        search_rows = {["rotation_speed"] = 21600, "stack"}
+        search_rows = {["rotation_speed"] = 21600, ["max_belt_stack_size"] = 1}
     },
 
     ["lab"] = {
@@ -276,13 +278,15 @@ defines.balancing_items_table = {
             pollution = {"flamethrower-ammo", 5/100},         --1 item can create up to 5 units of pollution
             consumption = {"copper-cable", 1/20},           --according to my calculations, 1 cable is capable of transmitting ~10 kW(average between furnace and assembler consumption per wire), which means that to add 100% to consumption for electric-furnace you need 18 cables
             speed = {"electric-engine-unit", 1/100},        --essentially a random item, needed for the user to be able to install a custom item
-            productivity = {"productivity-module", 4/100}   --same as with speed effect
+            productivity = {"productivity-module", 4/100},  --same as with speed effect
+            quality = {"quality-module-3", 1/40}            --0.025, matching quality module 3
         },
         negative = {
             pollution = {"wood", -1/1000},                  --wood absorbs pollution
             consumption = {"battery", -1/100},              --same as with positive speed effect
             speed = {"heavy-oil-barrel", -1/250},          --let's imagine that this module pours fuel oil onto the gears, causing a slowdown :)
-            productivity = {"raw-fish", -1/100}            --I have no idea what to put here, but a module with this effect is not needed at all
+            productivity = {"raw-fish", -1/100},           --I have no idea what to put here, but a module with this effect is not needed at all
+            quality = {"speed-module-3", -1/40}            --no vanilla negative quality module; placeholder
         }
     },
     energy = {

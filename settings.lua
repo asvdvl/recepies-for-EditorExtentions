@@ -34,14 +34,6 @@ data:extend({
         order = "d"
     },
     {
-        type = "int-setting",
-        name = "rfEE_divider_time_to_craft_overpower_items",
-        setting_type = "startup",
-        default_value = 1,
-        minimum_value = 1,
-        order = "e"
-    },
-    {
         type = "bool-setting",
         name = "rfEE_ignore_empty_technologies",
         setting_type = "startup",

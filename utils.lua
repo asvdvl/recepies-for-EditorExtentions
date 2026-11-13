@@ -9,7 +9,7 @@ local local_defines = {}
 --- @param item_name string input item name for checking
 --- @return table|number|nil
 function utils.is_item_NOT_from_EE(item_name)
-    return defines.recipes[item_name] or string.sub(item_name, 1, 3) ~= "ee-"
+    return not defines.recipes[item_name] and string.sub(item_name, 1, 3) ~= "ee-"
 end
 
 --- allows to specify some "code" in a string that is executed here. for example (25, 'val^2') -> 625

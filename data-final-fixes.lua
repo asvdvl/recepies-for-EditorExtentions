@@ -31,6 +31,7 @@ local MAX_ITEM_AMOUNT = 65535
 
 local recipes = defines.recipes
 local lev = utils.log_lev
+local overpowered_ingredients = {}
 
 defines.init_items_table(data.raw, start_settings)
 
@@ -251,9 +252,9 @@ log('main cycle for apply/calc all recepies')
 lev:add()
 for recipe, table in pairs(recipes) do
     local raw_type = utils.find_prototype_category(recipe)
-    local types_table = defines.types[raw_type]
-    func_apply_recipe = types_table.func
-    if data.raw[raw_type][recipe] then
+    local types_table = raw_type and defines.types[raw_type]
+    if types_table and data.raw[raw_type] and data.raw[raw_type][recipe] and all_recipes[recipe] then
+        local func_apply_recipe = types_table.func
         utils.log('recipe '..recipe)
         local success, reason = pcall(func_apply_recipe, data.raw[raw_type], all_recipes[recipe], table, types_table)
         if not success then
@@ -262,6 +263,8 @@ for recipe, table in pairs(recipes) do
         if #all_recipes[recipe].ingredients > 0 then
             all_recipes[recipe].enabled = false
         end
+    else
+        log("recipe `"..recipe.."` prototype not found, skipping")
     end
 end
 lev:rem()
@@ -301,7 +304,7 @@ for recipe, recipe_def_table in pairs(recipes) do
     --there are plans to “fix” too expensive items here
     local max_ingrigient_amount = start_settings["rfEE_max_items_count"].value
     local total_power_req = 0
-    for _, recipe_row in pairs(all_recipes[recipe].ingredients) do
+    for index, recipe_row in pairs(all_recipes[recipe].ingredients) do
         --fix "free energy items", part1, finding how much energy an object needs
         local entity_category = utils.find_prototype_category(recipe_row.name)
         local entity = entity_category and data.raw[entity_category][recipe_row.name] or nil
@@ -318,13 +321,16 @@ for recipe, recipe_def_table in pairs(recipes) do
         end
 
         local amount = recipe_row.amount
-        if amount > max_ingrigient_amount then
-            --basicly in plans 
-            log('item '..all_recipes[recipe].name..' is too powerfull, calc amount of top ingredient '..recipe_row.name..' is '..amount..' but allowed only `'..max_ingrigient_amount)
-            all_recipes[recipe].energy_required = math.ceil(amount / start_settings["rfEE_divider_time_to_craft_overpower_items"].value)+1
-            amount = max_ingrigient_amount
+        if amount > max_ingrigient_amount and (recipe_row.type or "item") ~= "fluid" then
+            log('item '..all_recipes[recipe].name..' is too powerfull, '..recipe_row.name..' amount is '..amount..', will be compressed into packs')
+            overpowered_ingredients[recipe] = overpowered_ingredients[recipe] or {}
+            table.insert(overpowered_ingredients[recipe], {
+                index = index,
+                name = recipe_row.name,
+                amount = amount,
+                type = recipe_row.type or "item"
+            })
         end
-        recipe_row.amount = amount
         total_power_req = total_power_req + (power_req * amount)
     end
     --fix "free energy items", part2, actual fixes
@@ -358,6 +364,10 @@ log('adding items to the technology tree')
 --and finally, adding items to the technology tree
 lev:add()
 for recipe in pairs(recipes) do
+    local recipe_proto = all_recipes[recipe]
+    local category = utils.find_prototype_category(recipe)
+    local item = data.raw.item[recipe] or (category and data.raw[category] and data.raw[category][recipe])
+    if recipe_proto and item then
     utils.log('apply tech for '..recipe)
     local ingredients_req = {}
     local ingredients_index = {}
@@ -389,7 +399,6 @@ for recipe in pairs(recipes) do
         order = "z"
     }
 
-    local item = data.raw.item[recipe] or data.raw[utils.find_prototype_category(recipe)][recipe]
     if item and (item.icons or item.icon) then
         new_tech.icons = item.icons or {{icon = item.icon, icon_size = item.icon_size, tint = item.tint}}
     elseif item and item.sprite then
@@ -444,6 +453,7 @@ for recipe in pairs(recipes) do
             new_tech.enabled = true
             new_tech.hidden = false
             utils.log(recipe..' enabled. req: '..serpent.block(ingredients_req))
+
         else
             log('recipe `'..recipe..'` was defined(and ingredients was assigned) but no ingridients for technology')
         end
@@ -453,5 +463,188 @@ for recipe in pairs(recipes) do
         log('recipe `'..recipe..'` was defined but ingredients were not assigned')
     end
     data:extend({new_tech})
+    end
 end
 lev:rem()
+
+log('compressing overpowered ingredients into packs')
+if next(overpowered_ingredients) then
+    -- the engine limit for one item ingredient is uint16 (65535)
+    local PACK_FACTOR = MAX_ITEM_AMOUNT
+    -- keep the input rate reasonable: 100 items per second at 100% crafting speed
+    local PACK_ITEMS_PER_SECOND = 100
+    local pack_subgroup = "intermediate-product"
+    if data.raw["item-group"]["ee-tools"] then
+        pack_subgroup = "rfEE-packs"
+        if not data.raw["item-subgroup"]["rfEE-packs"] then
+            data:extend({
+                {
+                    type = "item-subgroup",
+                    name = "rfEE-packs",
+                    group = "ee-tools",
+                    order = "z"
+                }
+            })
+        end
+    end
+
+    -- the pack icon is the target item's icon with a tier digit on top
+    local function get_target_icons(recipe)
+        local tech = data.raw.technology["rfEE_"..recipe]
+        if tech and tech.icons then
+            return table.deepcopy(tech.icons)
+        elseif tech and tech.icon then
+            return {{icon = tech.icon, icon_size = tech.icon_size or 64}}
+        end
+        local category = utils.find_prototype_category(recipe)
+        local item = data.raw.item[recipe] or (category and data.raw[category] and data.raw[category][recipe])
+        if item then
+            if item.icons then
+                return table.deepcopy(item.icons)
+            end
+            if item.icon then
+                return {{icon = item.icon, icon_size = item.icon_size or 64}}
+            end
+        end
+        return {{icon = "__base__/graphics/icons/iron-plate.png", icon_size = 64}}
+    end
+
+    for recipe, rows in pairs(overpowered_ingredients) do
+        local max_amount = start_settings["rfEE_max_items_count"].value
+        local target_icons = get_target_icons(recipe)
+        for _, row in pairs(rows) do
+            local tiers = 0
+            local remaining = row.amount
+            while remaining > max_amount do
+                remaining = math.ceil(remaining / PACK_FACTOR)
+                tiers = tiers + 1
+            end
+
+            if tiers > 0 then
+                local previous_name = row.name
+                local previous_type = row.type
+
+                for tier = 1, tiers do
+                    local pack_name = "rfEE-"..recipe.."-"..row.name.."-pack-"..tier
+                    local pack_icons = table.deepcopy(target_icons)
+                    if tier <= 9 then
+                        table.insert(pack_icons, {
+                            icon = "__base__/graphics/icons/signal/signal_"..tier..".png",
+                            icon_size = 64,
+                            scale = 0.45,
+                            shift = {16, 16}
+                        })
+                    end
+
+                    local pack_localised_name = {"", {"?", {"entity-name."..recipe}, {"item-name."..recipe}, {"equipment-name."..recipe}}, " ", {"rfee.pack-suffix"}}
+                    if tiers > 1 then
+                        table.insert(pack_localised_name, " (")
+                        table.insert(pack_localised_name, {"rfee.tier-suffix", tostring(tier), tostring(tiers)})
+                        table.insert(pack_localised_name, ")")
+                    end
+
+                    local pack_item = {
+                        type = "item",
+                        name = pack_name,
+                        icons = pack_icons,
+                        subgroup = pack_subgroup,
+                        order = "a["..recipe.."]-"..tier,
+                        stack_size = 100,
+                        localised_name = pack_localised_name
+                    }
+
+                    data:extend({
+                        pack_item,
+                        {
+                            type = "recipe",
+                            name = pack_name,
+                            ingredients = {{type = previous_type, name = previous_name, amount = PACK_FACTOR}},
+                            results = {{type = "item", name = pack_name, amount = 1}},
+                            enabled = false,
+                            energy_required = PACK_FACTOR / PACK_ITEMS_PER_SECOND
+                        }
+                    })
+
+                    -- unlock the pack together with the item's technology
+                    local tech = data.raw.technology["rfEE_"..recipe]
+                    if tech then
+                        tech.effects = tech.effects or {}
+                        table.insert(tech.effects, {type = "unlock-recipe", recipe = pack_name})
+                    end
+
+                    -- decompress the pack through the recycler
+                    if data.raw["recipe-category"]["recycling"] then
+                        local return_amount = PACK_FACTOR
+                        local recycling_name = pack_name.."-recycling"
+                        data:extend({
+                            {
+                                type = "recipe",
+                                name = recycling_name,
+                                localised_name = {"recipe-name.recycling", pack_localised_name},
+                                categories = {"recycling"},
+                                ingredients = {{type = "item", name = pack_name, amount = 1}},
+                                results = {{type = "item", name = previous_name, amount = return_amount}},
+                                energy_required = (PACK_FACTOR / PACK_ITEMS_PER_SECOND) / 16,
+                                enabled = false,
+                                hidden = true,
+                                allow_decomposition = false,
+                                unlock_results = false,
+                                subgroup = pack_subgroup,
+                                icons = {
+                                    {icon = "__recycler__/graphics/icons/recycling.png"},
+                                    {icon = "__recycler__/graphics/icons/recycling-top.png"}
+                                }
+                            }
+                        })
+                        if tech then
+                            table.insert(tech.effects, {type = "unlock-recipe", recipe = recycling_name})
+                        end
+                    end
+
+                    previous_name = pack_name
+                    previous_type = "item"
+                end
+
+                local final_row = all_recipes[recipe].ingredients[row.index]
+                final_row.type = "item"
+                final_row.name = previous_name
+                final_row.amount = math.ceil(row.amount / (PACK_FACTOR ^ tiers))
+            end
+        end
+    end
+end
+
+log('adding achievements')
+for recipe in pairs(recipes) do
+    local item = data.raw.item[recipe]
+    local tech = data.raw.technology["rfEE_"..recipe]
+    local recipe_proto = all_recipes[recipe]
+    if item and ((tech and tech.enabled) or (recipe_proto and recipe_proto.enabled == true)) then
+        local achievement = {
+            type = "produce-achievement",
+            name = "rfEE_"..recipe,
+            item_product = recipe,
+            amount = 1,
+            allowed_without_fight = true,
+            limited_to_one_game = false,
+            localised_name = {"", {"?", {"entity-name."..recipe}, {"item-name."..recipe}, {"equipment-name."..recipe}}, " ", {"rfee.achievement-suffix"}},
+            localised_description = {"rfee.achievement-description", {"?", {"entity-name."..recipe}, {"item-name."..recipe}, {"equipment-name."..recipe}}},
+            order = "z"
+        }
+        if tech and tech.icons then
+            achievement.icons = table.deepcopy(tech.icons)
+        elseif tech and tech.icon then
+            achievement.icon = tech.icon
+            achievement.icon_size = tech.icon_size
+        elseif item.icons then
+            achievement.icons = table.deepcopy(item.icons)
+        elseif item.icon then
+            achievement.icon = item.icon
+            achievement.icon_size = item.icon_size
+        else
+            achievement.icon = "__base__/graphics/icons/iron-plate.png"
+            achievement.icon_size = 64
+        end
+        data:extend({achievement})
+    end
+end
